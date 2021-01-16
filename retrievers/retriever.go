@@ -52,6 +52,18 @@ type StringRetriever interface {
 	Get() (string, error)
 }
 
+type StaticStringRetriever struct {
+	value string
+}
+
+func NewStaticStringRetriever(value string) *StaticStringRetriever {
+	return &StaticStringRetriever{value}
+}
+
+func (s *StaticStringRetriever) Get() (string, error) {
+	return s.value, nil
+}
+
 func NewIPRetriever(client *http.Client, queryURL string, ttl time.Duration) *ipRetriever {
 	retriever := &ipRetriever{
 		IP:     &atomic.Value{},
