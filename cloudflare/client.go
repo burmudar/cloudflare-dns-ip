@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -43,7 +44,7 @@ type Client struct {
 
 func NewTokenClient(token string) *Client {
 	var headers http.Header = make(http.Header)
-	headers.Add("Authorization", "Bearer "+token)
+	headers.Add("Authorization", "Bearer "+strings.TrimSpace(token))
 	headers.Add("Content-Type", "application/json")
 
 	return &Client{
