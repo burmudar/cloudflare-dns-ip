@@ -10,8 +10,8 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "cloudfare-dns",
 	Short: "Cloudfare DNS updates specific dns records with public ips",
-	Long: `A Personal utility used by @Burmudar to update various machines he has in his apartment
-                Code at github.com/Burmudar/cloudflare-dns-ip`,
+	Long: `A Personal utility used by @burmudar to update various machines he has in his apartment
+                Code at github.com/burmudar/cloudflare-dns-ip`,
 }
 
 func Execute() {
