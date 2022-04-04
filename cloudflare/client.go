@@ -70,7 +70,7 @@ type DNSRecord struct {
 	Proxiable bool           `json:"proxiable"`
 	Proxied   bool           `json:"proxied"`
 	TTL       int            `json:"ttl"`
-	Locked    bool           `json:"locked'`
+	Locked    bool           `json:"locked"`
 	Created   *time.Time     `json:"Created"`
 	Modified  *time.Time     `json:"Modified"`
 	Meta      *DNSRecordMeta `json:"meta"`
@@ -89,26 +89,6 @@ type Zone struct {
 	Created         *time.Time `json:"created_on"`
 	Modified        *time.Time `json:"modified_on"`
 	Activated       *time.Time `json:"activated_on"`
-}
-
-func FindDNSRecordByName(records []DNSRecord, name string) *DNSRecord {
-	for _, r := range records {
-		if r.Name == name {
-			return &r
-		}
-	}
-
-	return nil
-}
-
-func FindZoneByName(zones []Zone, name string) *Zone {
-	for _, z := range zones {
-		if z.Name == name {
-			return &z
-		}
-	}
-
-	return nil
 }
 
 func (c *Client) NewRequest(method string, url string, body io.Reader) (*http.Request, error) {
