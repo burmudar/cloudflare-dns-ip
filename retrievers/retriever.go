@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var DefaultIPRetriever = NewIPRetriever(http.DefaultClient, "http://ifconfig.co", 30*time.Second)
+
 type URLRetriever struct {
 	URL    string
 	client *http.Client

@@ -2,21 +2,20 @@ package cloudflare
 
 import (
 	"bytes"
-	"cloudflare-dns/cloudflare/model"
+	"cloudflare-dns/dns/cloudflare/model"
+	"cloudflare-dns/dns"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 )
 
 const API_CLOUDFLARE_V4 = "https://api.cloudflare.com/client/v4/"
 
-type Credentials interface {
-	Apply(req *http.Request) error
-}
 
 type HeaderCredentials struct {
 	Headers []http.Header
@@ -35,7 +34,7 @@ func (h *HeaderCredentials) Apply(req *http.Request) error {
 	return nil
 }
 
-func NewHeaderCredentials(headers ...http.Header) Credentials {
+func NewHeaderCredentials(headers ...http.Header) dns.Credentials {
 	return &HeaderCredentials{
 		headers,
 	}
@@ -43,11 +42,11 @@ func NewHeaderCredentials(headers ...http.Header) Credentials {
 
 type Client struct {
 	http        *http.Client
-	Credentials Credentials
-	apiURL      *url.URL
+	Credentials dns.Credentials
+	api      string
 }
 
-func NewTokenClient(apiURL, token string) (*Client, error) {
+func NewTokenClient(apiURL, token string) (dns.DNSClient, error) {
 	var headers http.Header = make(http.Header)
 	headers.Add("Authorization", "Bearer "+strings.TrimSpace(token))
 	headers.Add("Content-Type", "application/json")
@@ -60,14 +59,12 @@ func NewTokenClient(apiURL, token string) (*Client, error) {
 	return &Client{
 		http.DefaultClient,
 		NewHeaderCredentials(headers),
-		url,
+		url.String(),
 	}, nil
 }
 
-func (c *Client) formatURL(format string, params ...interface{}) string {
-	c.apiURL.Path = fmt.Sprintf(format, params ...)
-
-	return c.apiURL.RequestURI()
+func (c *Client) urlJoin(p string) string {
+    return path.Join(c.api, p)
 }
 
 func (c *Client) NewRequest(method string, url string, body io.Reader) (*http.Request, error) {
@@ -83,7 +80,7 @@ func (c *Client) NewRequest(method string, url string, body io.Reader) (*http.Re
 }
 
 func (c *Client) ListZones() ([]model.Zone, error) {
-	var url = c.formatURL("zones")
+	var url = c.urlJoin("zones")
 
 	req, err := c.NewRequest("GET", url, nil)
 	resp, err := c.http.Do(req)
@@ -107,8 +104,8 @@ func (c *Client) ListZones() ([]model.Zone, error) {
 	return result.Zones, nil
 }
 
-func (c *Client) ListDnsRecords(zoneId string) ([]model.DNSRecord, error) {
-	var url = c.formatURL("/zones/%s/dns_records", zoneId)
+func (c *Client) ListRecords(zoneId string) ([]model.DNSRecord, error) {
+	var url = c.urlJoin(fmt.Sprintf("/zones/%s/dns_records", zoneId))
 
 	req, err := c.NewRequest("GET", url, nil)
 
@@ -133,31 +130,31 @@ func (c *Client) ListDnsRecords(zoneId string) ([]model.DNSRecord, error) {
 	return result.Records, nil
 }
 
-func (c *Client) UpdateDNSRecord(r *model.DNSRecordRequest) error {
-	var url = c.formatURL("zones/%s/dns_records/%s", r.ZoneID, r.ID)
+func (c *Client) UpdateRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) {
+	var url = c.urlJoin(fmt.Sprintf("zones/%s/dns_records/%s", r.ZoneID, r.ID))
 	data, err := json.Marshal(r)
 	if err != nil {
-        return err
+        return nil, err
 	}
 
 	req, err := c.NewRequest("PUT", url, bytes.NewBuffer(data))
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("Failed to do request: %w", err)
+		return nil, fmt.Errorf("Failed to do request: %w", err)
 	}
 
 	data, err = ioutil.ReadAll(resp.Body)
 
-	return err
+	return nil, err
 }
 
-func (c *Client) NewDNSRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) {
-	var url = c.formatURL("zones/%s/dns_records", r.ZoneID)
+func (c *Client) NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) {
+	var url = c.urlJoin(fmt.Sprintf("zones/%s/dns_records", r.ZoneID))
 
 	data, err := json.Marshal(r)
 	if err != nil {
@@ -181,4 +178,30 @@ func (c *Client) NewDNSRecord(r *model.DNSRecordRequest) (*model.DNSRecord, erro
 
     return &record, nil
 
+}
+
+func (c *Client) DeleteRecord(r *model.DNSRecordRequest) (string, error) {
+    var url = c.urlJoin(fmt.Sprintf("DELETE zones/%s/dns_records/%s", r.ZoneID, r.ID))
+
+    req, err := c.NewRequest("DELETE", url, nil)
+    if err != nil {
+        return "", err
+    }
+
+    resp, err := c.http.Do(req)
+    if err != nil || resp.StatusCode != http.StatusOK {
+        return "", fmt.Errorf("failed to delete record: %w", err)
+    }
+
+    data, err := ioutil.ReadAll(resp.Body)
+
+    var result = struct{
+        id string
+    }{}
+
+    if err := json.Unmarshal(data, &result); err != nil {
+        return "", fmt.Errorf("failed to unmarshall result: %w", err)
+    }
+
+    return result.id, nil
 }

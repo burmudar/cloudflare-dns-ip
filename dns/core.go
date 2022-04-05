@@ -1,30 +1,41 @@
 package dns
 
 import (
-	"cloudflare-dns/cloudflare"
+	"cloudflare-dns/dns/cloudflare/model"
 	"cloudflare-dns/retrievers"
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 )
 
 type ZoneType string
 
 const (
-    AType ZoneType = "A"
+	AType ZoneType = "A"
 )
 
-type Record struct {
-    ZoneName string
-    Type ZoneType
-    Name string
-    IP string
-    TTL int
+type DNSClient interface {
+	UpdateRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error)
+	NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error)
+	DeleteRecord(r *model.DNSRecordRequest) (string, error)
+
+	ListZones() ([]model.Zone, error)
+	ListRecords(zoneID string) ([]model.DNSRecord, error)
 }
 
+type Credentials interface {
+	Apply(req *http.Request) error
+}
 
-func filterByName(records []cloudflare.DNSRecordResponse, name string) *cloudflare.DNSRecordResponse {
+type Record struct {
+	ZoneName string
+	Type     ZoneType
+	Name     string
+	IP       string
+	TTL      int
+}
+
+func filterByName(records []model.DNSRecord, name string) *model.DNSRecord {
 	for _, r := range records {
 		if r.Name == name {
 			return &r
@@ -34,7 +45,7 @@ func filterByName(records []cloudflare.DNSRecordResponse, name string) *cloudfla
 	return nil
 }
 
-func filterZoneByName(zones []cloudflare.ZoneResponse, name string) *cloudflare.ZoneResponse {
+func filterZoneByName(zones []model.Zone, name string) *model.Zone {
 	for _, z := range zones {
 		if z.Name == name {
 			return &z
@@ -44,12 +55,11 @@ func filterZoneByName(zones []cloudflare.ZoneResponse, name string) *cloudflare.
 	return nil
 }
 
-
-func UpdateRecord(client *cloudflare.Client, record Record) error {
-    remoteRecord, err := FindRecord(client, record)
-    if err != nil {
-        return CreateRecord(client, record)
-    }
+func UpdateRecord(client DNSClient, record Record) error {
+	remoteRecord, err := FindRecord(client, record)
+	if err != nil {
+		return CreateRecord(client, record)
+	}
 	fmt.Fprintf(os.Stderr, "FOUND!\n")
 
 	var retriever retrievers.StringRetriever
@@ -57,7 +67,7 @@ func UpdateRecord(client *cloudflare.Client, record Record) error {
 		retriever = retrievers.NewStaticStringRetriever(record.IP)
 		fmt.Fprintf(os.Stderr, "Manually setting ip ...")
 	} else {
-		retriever = retrievers.NewIPRetriever(http.DefaultClient, "https://ifconfig.co", 30*time.Second)
+		retriever = retrievers.DefaultIPRetriever
 		fmt.Fprintf(os.Stderr, "Discovering public ip ...")
 	}
 
@@ -68,7 +78,15 @@ func UpdateRecord(client *cloudflare.Client, record Record) error {
 		remoteRecord.TTL = record.TTL
 		remoteRecord.Content = ip
 		fmt.Fprintf(os.Stderr, "Updating DNS [%s %s] record content with ip: %s\n", remoteRecord.Type, remoteRecord.Name, ip)
-		client.UpdateDNSRecord(remoteRecord)
+		client.UpdateRecord(&model.DNSRecordRequest{
+            ID: remoteRecord.ID,
+            ZoneID: remoteRecord.ZoneID,
+            Name: remoteRecord.Name,
+            Type: remoteRecord.Type,
+            Content: ip,
+            Proxied: remoteRecord.Proxied,
+            TTL: record.TTL,
+        })
 		fmt.Fprintln(os.Stderr, "Updated!")
 	} else {
 		fmt.Fprintf(os.Stderr, "%s\n", ip)
@@ -78,28 +96,26 @@ func UpdateRecord(client *cloudflare.Client, record Record) error {
 	return nil
 }
 
-func CreateRecord(client *cloudflare.Client, record Record) error {
-    zone, err := FindZone(client, record)
-    if err != nil {
-        return err
-    }
+func CreateRecord(client DNSClient, record Record) error {
+	zone, err := FindZone(client, record)
+	if err != nil {
+		return err
+	}
 
-    resp, err := client.NewDNSRecord(&cloudflare.DNSRecordRequest{
-        ZoneID: zone.ID,
-        Name: record.Name,
-        Content: record.IP,
-        Type: string(record.Type),
-        Proxied: false,
-        TTL: record.TTL,
-        Priority: 10,
-    })
+	_, _ = client.NewRecord(&model.DNSRecordRequest{
+		ZoneID:   zone.ID,
+		Name:     record.Name,
+		Content:  record.IP,
+		Type:     string(record.Type),
+		Proxied:  false,
+		TTL:      record.TTL,
+		Priority: 10,
+	})
 
-    if data, err := resp.ok() {
-    }
-    return nil
+	return nil
 }
 
-func FindZone(client *cloudflare.Client, record Record) (*cloudflare.ZoneResponse, error) {
+func FindZone(client DNSClient, record Record) (*model.Zone, error) {
 	zones, err := client.ListZones()
 	if err != nil {
 		return nil, fmt.Errorf("Error while listing zones: %v\n", err)
@@ -110,14 +126,17 @@ func FindZone(client *cloudflare.Client, record Record) (*cloudflare.ZoneRespons
 		return nil, fmt.Errorf("No zone with name '%s' found\n", record.ZoneName)
 	}
 
-    return zone, nil
+	return zone, nil
 }
 
-
-func FindRecord(client *cloudflare.Client, record Record) (*cloudflare.DNSRecordResponse, error) {
+func FindRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
+	zone, err := FindZone(client, record)
+	if err != nil {
+		return nil, err
+	}
 
 	fmt.Fprintf(os.Stderr, "Listing DNS Records for zone '%s' using id '%s' ...", zone.Name, zone.ID)
-	records, err := client.ListDnsRecords(zone.ID)
+	records, err := client.ListRecords(zone.ID)
 	if err != nil {
 		return nil, fmt.Errorf("Error while listing dns records: %v\n", err)
 	}
@@ -129,5 +148,5 @@ func FindRecord(client *cloudflare.Client, record Record) (*cloudflare.DNSRecord
 		return nil, fmt.Errorf("No dns record with name '%s' found in zone '%s'\n", record.Name, record.ZoneName)
 	}
 
-    return remoteRecord, nil
+	return remoteRecord, nil
 }
