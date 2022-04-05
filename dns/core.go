@@ -9,15 +9,22 @@ import (
 	"time"
 )
 
+type ZoneType string
+
+const (
+    AType ZoneType = "A"
+)
+
 type Record struct {
     ZoneName string
+    Type ZoneType
     Name string
     IP string
     TTL int
 }
 
 
-func FindRecordByName(records []cloudflare.DNSRecord, name string) *cloudflare.DNSRecord {
+func filterByName(records []cloudflare.DNSRecordResponse, name string) *cloudflare.DNSRecordResponse {
 	for _, r := range records {
 		if r.Name == name {
 			return &r
@@ -27,7 +34,7 @@ func FindRecordByName(records []cloudflare.DNSRecord, name string) *cloudflare.D
 	return nil
 }
 
-func FindZoneByName(zones []cloudflare.Zone, name string) *cloudflare.Zone {
+func filterZoneByName(zones []cloudflare.ZoneResponse, name string) *cloudflare.ZoneResponse {
 	for _, z := range zones {
 		if z.Name == name {
 			return &z
@@ -38,35 +45,11 @@ func FindZoneByName(zones []cloudflare.Zone, name string) *cloudflare.Zone {
 }
 
 
-func UpdateRecord(token string, record Record) error {
-	client := cloudflare.NewTokenClient(token)
-
-	fmt.Fprintf(os.Stderr, "Listing zones ...")
-	zones, err := client.ListZones()
-	if err != nil {
-		return fmt.Errorf("Error while listing zones: %v\n", err)
-	}
-	fmt.Fprintf(os.Stderr, "%d listed zones\n", len(zones))
-
-	fmt.Fprintf(os.Stderr, "Locating zone: %s ...", record.ZoneName)
-	zone := FindZoneByName(zones, record.ZoneName)
-	if zone == nil {
-		return fmt.Errorf("No zone with name '%s' found\n", record.ZoneName)
-	}
-	fmt.Fprintf(os.Stderr, "FOUND!\n")
-
-	fmt.Fprintf(os.Stderr, "Listing DNS Records for zone '%s' using id '%s' ...", zone.Name, zone.ID)
-	records, err := client.ListDnsRecords(zone.ID)
-	if err != nil {
-		return fmt.Errorf("Error while listing dns records: %v\n", err)
-	}
-	fmt.Fprintf(os.Stderr, "%d listed dns records\n", len(records))
-
-	fmt.Fprintf(os.Stderr, "Locatin DNS Record: %s ...", record.Name)
-	remoteRecord := FindRecordByName(records, record.Name)
-	if remoteRecord == nil {
-		return fmt.Errorf("No dns record with name '%s' found in zone '%s'\n", record.Name, record.ZoneName)
-	}
+func UpdateRecord(client *cloudflare.Client, record Record) error {
+    remoteRecord, err := FindRecord(client, record)
+    if err != nil {
+        return CreateRecord(client, record)
+    }
 	fmt.Fprintf(os.Stderr, "FOUND!\n")
 
 	var retriever retrievers.StringRetriever
@@ -93,4 +76,58 @@ func UpdateRecord(token string, record Record) error {
 	}
 
 	return nil
+}
+
+func CreateRecord(client *cloudflare.Client, record Record) error {
+    zone, err := FindZone(client, record)
+    if err != nil {
+        return err
+    }
+
+    resp, err := client.NewDNSRecord(&cloudflare.DNSRecordRequest{
+        ZoneID: zone.ID,
+        Name: record.Name,
+        Content: record.IP,
+        Type: string(record.Type),
+        Proxied: false,
+        TTL: record.TTL,
+        Priority: 10,
+    })
+
+    if data, err := resp.ok() {
+    }
+    return nil
+}
+
+func FindZone(client *cloudflare.Client, record Record) (*cloudflare.ZoneResponse, error) {
+	zones, err := client.ListZones()
+	if err != nil {
+		return nil, fmt.Errorf("Error while listing zones: %v\n", err)
+	}
+
+	zone := filterZoneByName(zones, record.ZoneName)
+	if zone == nil {
+		return nil, fmt.Errorf("No zone with name '%s' found\n", record.ZoneName)
+	}
+
+    return zone, nil
+}
+
+
+func FindRecord(client *cloudflare.Client, record Record) (*cloudflare.DNSRecordResponse, error) {
+
+	fmt.Fprintf(os.Stderr, "Listing DNS Records for zone '%s' using id '%s' ...", zone.Name, zone.ID)
+	records, err := client.ListDnsRecords(zone.ID)
+	if err != nil {
+		return nil, fmt.Errorf("Error while listing dns records: %v\n", err)
+	}
+	fmt.Fprintf(os.Stderr, "%d listed dns records\n", len(records))
+
+	fmt.Fprintf(os.Stderr, "Locatin DNS Record: %s ...", record.Name)
+	remoteRecord := filterByName(records, record.Name)
+	if remoteRecord == nil {
+		return nil, fmt.Errorf("No dns record with name '%s' found in zone '%s'\n", record.Name, record.ZoneName)
+	}
+
+    return remoteRecord, nil
 }
