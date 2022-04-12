@@ -55,13 +55,15 @@ func filterZoneByName(zones []model.Zone, name string) *model.Zone {
 	return nil
 }
 
-func UpdateRecord(client DNSClient, record Record) error {
+func UpdateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 	remoteRecord, err := FindRecord(client, record)
+    fmt.Printf("\n\nerr: %v, Record: %v\n", err, remoteRecord)
 	if err != nil {
 		return CreateRecord(client, record)
 	}
 	fmt.Fprintf(os.Stderr, "FOUND!\n")
 
+    fmt.Println("####2")
 	var retriever retrievers.StringRetriever
 	if record.IP != "" {
 		retriever = retrievers.NewStaticStringRetriever(record.IP)
@@ -71,9 +73,13 @@ func UpdateRecord(client DNSClient, record Record) error {
 		fmt.Fprintf(os.Stderr, "Discovering public ip ...")
 	}
 
-	if ip, err := retriever.Get(); err != nil {
-		return fmt.Errorf("Failed to get ip: %v\n", err)
-	} else if ip != remoteRecord.Content {
+	ip, err := retriever.Get()
+
+    if err != nil {
+		return nil, fmt.Errorf("Failed to get ip: %v\n", err)
+	}
+
+    if ip != remoteRecord.Content {
 		fmt.Fprintf(os.Stderr, "%s\n", ip)
 		remoteRecord.TTL = record.TTL
 		remoteRecord.Content = ip
@@ -88,21 +94,28 @@ func UpdateRecord(client DNSClient, record Record) error {
             TTL: record.TTL,
         })
 		fmt.Fprintln(os.Stderr, "Updated!")
-	} else {
-		fmt.Fprintf(os.Stderr, "%s\n", ip)
-		fmt.Fprintf(os.Stderr, "DNS [%s %s] content already contains: %s\n", remoteRecord.Type, record.Name, ip)
 	}
 
-	return nil
+    fmt.Fprintf(os.Stderr, "%s\n", ip)
+    fmt.Fprintf(os.Stderr, "DNS [%s %s] content already contains: %s\n", remoteRecord.Type, record.Name, ip)
+
+	return remoteRecord, nil
 }
 
-func CreateRecord(client DNSClient, record Record) error {
+func CreateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 	zone, err := FindZone(client, record)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, _ = client.NewRecord(&model.DNSRecordRequest{
+    fmt.Println("\nCreate DNS Record:")
+    fmt.Printf("Zone ID: %20s\n", zone.ID)
+    fmt.Printf("Name: %20s\n", record.Name)
+    fmt.Printf("Content: %20s\n", record.IP)
+    fmt.Printf("Type: %20s\n", record.Type)
+    fmt.Printf("TTL: %20d\n", record.TTL)
+
+	return client.NewRecord(&model.DNSRecordRequest{
 		ZoneID:   zone.ID,
 		Name:     record.Name,
 		Content:  record.IP,
@@ -111,8 +124,6 @@ func CreateRecord(client DNSClient, record Record) error {
 		TTL:      record.TTL,
 		Priority: 10,
 	})
-
-	return nil
 }
 
 func FindZone(client DNSClient, record Record) (*model.Zone, error) {
@@ -142,7 +153,7 @@ func FindRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 	}
 	fmt.Fprintf(os.Stderr, "%d listed dns records\n", len(records))
 
-	fmt.Fprintf(os.Stderr, "Locatin DNS Record: %s ...", record.Name)
+	fmt.Fprintf(os.Stderr, "Locating DNS Record: %s ...", record.Name)
 	remoteRecord := filterByName(records, record.Name)
 	if remoteRecord == nil {
 		return nil, fmt.Errorf("No dns record with name '%s' found in zone '%s'\n", record.Name, record.ZoneName)
