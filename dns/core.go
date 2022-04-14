@@ -57,13 +57,11 @@ func filterZoneByName(zones []model.Zone, name string) *model.Zone {
 
 func UpdateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 	remoteRecord, err := FindRecord(client, record)
-    fmt.Printf("\n\nerr: %v, Record: %v\n", err, remoteRecord)
 	if err != nil {
 		return CreateRecord(client, record)
 	}
 	fmt.Fprintf(os.Stderr, "FOUND!\n")
 
-    fmt.Println("####2")
 	var retriever retrievers.StringRetriever
 	if record.IP != "" {
 		retriever = retrievers.NewStaticStringRetriever(record.IP)

@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+var ErrEmptyResponse error = fmt.Errorf("Empty Response. Did you forget to add a response for this method ?")
+
 type DummyDNSClient struct {
 	Requests  map[string]*model.DNSRecordRequest
 	Responses map[string]interface{}
@@ -21,8 +23,7 @@ func (c *DummyDNSClient) DeleteRecord(r *model.DNSRecordRequest) (string, error)
 	} else if v, ok := response.(error); ok {
 		return "", v
 	}
-
-	return "", nil
+	return "", ErrEmptyResponse
 }
 
 func (c *DummyDNSClient) NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) {
@@ -34,8 +35,7 @@ func (c *DummyDNSClient) NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord,
 	} else if v, ok := response.(error); ok {
 		return nil, v
 	}
-
-	return nil, nil
+	return nil, ErrEmptyResponse
 }
 
 func (c *DummyDNSClient) UpdateRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) {
@@ -47,8 +47,7 @@ func (c *DummyDNSClient) UpdateRecord(r *model.DNSRecordRequest) (*model.DNSReco
 	} else if v, ok := response.(error); ok {
 		return nil, v
 	}
-
-	return nil, nil
+	return nil, ErrEmptyResponse
 }
 
 func (c *DummyDNSClient) ListZones() ([]model.Zone, error) {
@@ -60,8 +59,7 @@ func (c *DummyDNSClient) ListZones() ([]model.Zone, error) {
 	} else if v, ok := response.(error); ok {
 		return nil, v
 	}
-
-	return nil, nil
+	return nil, ErrEmptyResponse
 }
 
 func (c *DummyDNSClient) ListRecords(zoneID string) ([]model.DNSRecord, error) {
@@ -73,8 +71,7 @@ func (c *DummyDNSClient) ListRecords(zoneID string) ([]model.DNSRecord, error) {
 	} else if v, ok := response.(error); ok {
 		return nil, v
 	}
-
-	return nil, nil
+	return nil, ErrEmptyResponse
 }
 
 func NewDummyClient() *DummyDNSClient {
@@ -219,6 +216,68 @@ func TestUpdateRecord(t *testing.T) {
 
 		if !eq(&wanted, result) {
 			t.Errorf("wanted:\n %v \ngot %v", wanted, result)
+		}
+	})
+}
+
+func TestCreateRecord(t *testing.T) {
+	var record = Record{
+		ZoneName: "fake-zone-name-222",
+		Type:     "A",
+		Name:     "fake-record-name-222",
+		IP:       "255.255.255.255",
+		TTL:      200,
+	}
+	t.Run("No matching zone, returns error", func(t *testing.T) {
+		var dummy DNSClient = &DummyDNSClient{
+			Requests:  map[string]*model.DNSRecordRequest{},
+			Responses: map[string]interface{}{},
+		}
+
+		result, err := CreateRecord(dummy, record)
+
+		if result != nil {
+			t.Errorf("With no matching zone, result should be nil")
+		}
+		if err == nil {
+			t.Errorf("With no matching zone, err should not be nil")
+		}
+	})
+
+	t.Run("Matching zone, creates Record in zone", func(t *testing.T) {
+		wanted := model.DNSRecord{
+			ID:       "fake-record-123",
+			ZoneID:   "fake-123",
+			ZoneName: "Test Zone",
+			Content:  "127.0.0.1",
+			Type:     "A",
+			TTL:      300,
+		}
+
+		var dummy DNSClient = &DummyDNSClient{
+			Requests: make(map[string]*model.DNSRecordRequest),
+			Responses: map[string]interface{}{
+				"ListZones": []model.Zone{
+					{
+						ID:     "fake-zone-id-222",
+						Name:   "fake-zone-name-222",
+						Status: "ACTIVE",
+						Type:   "A",
+					},
+				},
+				"NewRecord": &wanted,
+			},
+		}
+
+		result, err := CreateRecord(dummy, record)
+		t.Logf("result: %v err: %v", result, err)
+
+		if err != nil {
+			t.Fatalf("Unexpected error during CreateRecord: %v", err)
+		}
+
+		if !eq(result, &wanted) {
+			t.Errorf("wanted %v got %v", result, wanted)
 		}
 	})
 }
