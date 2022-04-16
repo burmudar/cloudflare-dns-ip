@@ -9,6 +9,11 @@ type DNSRecordMeta struct {
 	Source        string `json:"Source"`
 }
 
+type DNSDeleteRequest struct {
+	ID     string
+	ZoneID string
+}
+
 type DNSRecordRequest struct {
 	ID       string
 	ZoneID   string
@@ -50,4 +55,3 @@ type Zone struct {
 	Modified        *time.Time `json:"modified_on"`
 	Activated       *time.Time `json:"activated_on"`
 }
-

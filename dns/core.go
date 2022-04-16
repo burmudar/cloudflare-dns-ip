@@ -17,7 +17,7 @@ const (
 type DNSClient interface {
 	UpdateRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error)
 	NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error)
-	DeleteRecord(r *model.DNSRecordRequest) (string, error)
+	DeleteRecord(r *model.DNSDeleteRequest) (string, error)
 
 	ListZones() ([]model.Zone, error)
 	ListRecords(zoneID string) ([]model.DNSRecord, error)
@@ -28,6 +28,7 @@ type Credentials interface {
 }
 
 type Record struct {
+    ID       string
 	ZoneName string
 	Type     ZoneType
 	Name     string
@@ -158,4 +159,8 @@ func FindRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 	}
 
 	return remoteRecord, nil
+}
+
+func DeleteRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
+    return nil, nil
 }

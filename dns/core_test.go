@@ -9,11 +9,11 @@ import (
 var ErrEmptyResponse error = fmt.Errorf("Empty Response. Did you forget to add a response for this method ?")
 
 type DummyDNSClient struct {
-	Requests  map[string]*model.DNSRecordRequest
+	Requests  map[string]interface{}
 	Responses map[string]interface{}
 }
 
-func (c *DummyDNSClient) DeleteRecord(r *model.DNSRecordRequest) (string, error) {
+func (c *DummyDNSClient) DeleteRecord(r *model.DNSDeleteRequest) (string, error) {
 	c.Requests["DeleteRecord"] = r
 
 	response := c.Responses["DeleteRecord"]
@@ -270,7 +270,6 @@ func TestCreateRecord(t *testing.T) {
 		}
 
 		result, err := CreateRecord(dummy, record)
-		t.Logf("result: %v err: %v", result, err)
 
 		if err != nil {
 			t.Fatalf("Unexpected error during CreateRecord: %v", err)
@@ -279,5 +278,66 @@ func TestCreateRecord(t *testing.T) {
 		if !eq(result, &wanted) {
 			t.Errorf("wanted %v got %v", result, wanted)
 		}
+	})
+}
+
+func TestDeleteRecord(t *testing.T) {
+	var record = Record{
+		ZoneName: "fake-zone-name-222",
+		Type:     "A",
+		Name:     "fake-record-name-222",
+		IP:       "255.255.255.255",
+		TTL:      200,
+	}
+	t.Run("No matching zone, returns error", func(t *testing.T) {
+		var dummy DNSClient = &DummyDNSClient{
+			Requests:  map[string]interface{}{},
+			Responses: map[string]interface{}{},
+		}
+
+		_, err := DeleteRecord(dummy, record)
+
+		if err == nil {
+			t.Errorf("With no matching zone, err should not be nil")
+		}
+	})
+
+	t.Run("Matching zone, Deletes Record", func(t *testing.T) {
+		var dummy *DummyDNSClient = &DummyDNSClient{
+			Requests: make(map[string]interface{}),
+			Responses: map[string]interface{}{
+				"ListZones": []model.Zone{
+					{
+						ID:     "fake-zone-id-222",
+						Name:   "fake-zone-name-222",
+						Status: "ACTIVE",
+						Type:   "A",
+					},
+				},
+				"DeleteRecord": nil,
+			},
+		}
+
+        //TODO check result
+		result, err := DeleteRecord(dummy, record)
+
+		if err != nil {
+			t.Fatalf("Unexpected error during DeleteRecord: %v", err)
+		}
+
+		actualReq := dummy.Requests["DeleteRecord"].(*model.DNSDeleteRequest)
+
+		expected := model.DNSDeleteRequest{
+			ID:     "",
+			ZoneID: "fake-zone-id-222",
+		}
+
+        if expected.ID != actualReq.ID {
+            t.Errorf("Incorrect Record ID used in Delete Request")
+        }
+
+        if expected.ZoneID != actualReq.ZoneID {
+            t.Errorf("Incorrect Zone ID used in Delete Request")
+        }
 	})
 }
