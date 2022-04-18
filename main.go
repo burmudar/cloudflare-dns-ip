@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cloudflare-dns/cmd"
+"cloudflare-dns/cmd"
 )
 
 func main() {
