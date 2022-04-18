@@ -2,8 +2,8 @@ package cloudflare
 
 import (
 	"bytes"
-	"cloudflare-dns/dns/cloudflare/model"
 	"cloudflare-dns/dns"
+	"cloudflare-dns/dns/cloudflare/model"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,11 +16,9 @@ import (
 
 const API_CLOUDFLARE_V4 = "https://api.cloudflare.com/client/v4/"
 
-
 type HeaderCredentials struct {
 	Headers []http.Header
 }
-
 
 func (h *HeaderCredentials) Apply(req *http.Request) error {
 
@@ -43,7 +41,7 @@ func NewHeaderCredentials(headers ...http.Header) dns.Credentials {
 type Client struct {
 	http        *http.Client
 	Credentials dns.Credentials
-	api      string
+	api         string
 }
 
 func NewTokenClient(apiURL, token string) (dns.DNSClient, error) {
@@ -64,7 +62,7 @@ func NewTokenClient(apiURL, token string) (dns.DNSClient, error) {
 }
 
 func (c *Client) urlJoin(p string) string {
-    return path.Join(c.api, p)
+	return path.Join(c.api, p)
 }
 
 func (c *Client) NewRequest(method string, url string, body io.Reader) (*http.Request, error) {
@@ -134,7 +132,7 @@ func (c *Client) UpdateRecord(r *model.DNSRecordRequest) (*model.DNSRecord, erro
 	var url = c.urlJoin(fmt.Sprintf("zones/%s/dns_records/%s", r.ZoneID, r.ID))
 	data, err := json.Marshal(r)
 	if err != nil {
-        return nil, err
+		return nil, err
 	}
 
 	req, err := c.NewRequest("PUT", url, bytes.NewBuffer(data))
@@ -158,10 +156,10 @@ func (c *Client) NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) 
 
 	data, err := json.Marshal(r)
 	if err != nil {
-        return nil, err
+		return nil, err
 	}
 
-    req, err := c.NewRequest("POST", url, bytes.NewBuffer(data))
+	req, err := c.NewRequest("POST", url, bytes.NewBuffer(data))
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -170,38 +168,38 @@ func (c *Client) NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) 
 
 	data, err = ioutil.ReadAll(resp.Body)
 
-    var record model.DNSRecord
+	var record model.DNSRecord
 
-    if err  = json.Unmarshal(data, &record); err != nil {
-        return nil, err
-    }
+	if err = json.Unmarshal(data, &record); err != nil {
+		return nil, err
+	}
 
-    return &record, nil
+	return &record, nil
 
 }
 
-func (c *Client) DeleteRecord(r *model.DNSRecordRequest) (string, error) {
-    var url = c.urlJoin(fmt.Sprintf("DELETE zones/%s/dns_records/%s", r.ZoneID, r.ID))
+func (c *Client) DeleteRecord(r *model.DNSDeleteRequest) (string, error) {
+	var url = c.urlJoin(fmt.Sprintf("DELETE zones/%s/dns_records/%s", r.ZoneID, r.ID))
 
-    req, err := c.NewRequest("DELETE", url, nil)
-    if err != nil {
-        return "", err
-    }
+	req, err := c.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return "", err
+	}
 
-    resp, err := c.http.Do(req)
-    if err != nil || resp.StatusCode != http.StatusOK {
-        return "", fmt.Errorf("failed to delete record: %w", err)
-    }
+	resp, err := c.http.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to delete record: %w", err)
+	}
 
-    data, err := ioutil.ReadAll(resp.Body)
+	data, err := ioutil.ReadAll(resp.Body)
 
-    var result = struct{
-        id string
-    }{}
+	var result = struct {
+		id string
+	}{}
 
-    if err := json.Unmarshal(data, &result); err != nil {
-        return "", fmt.Errorf("failed to unmarshall result: %w", err)
-    }
+	if err := json.Unmarshal(data, &result); err != nil {
+		return "", fmt.Errorf("failed to unmarshall result: %w", err)
+	}
 
-    return result.id, nil
+	return result.id, nil
 }

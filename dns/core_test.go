@@ -76,7 +76,7 @@ func (c *DummyDNSClient) ListRecords(zoneID string) ([]model.DNSRecord, error) {
 
 func NewDummyClient() *DummyDNSClient {
 	return &DummyDNSClient{
-		Requests:  make(map[string]*model.DNSRecordRequest),
+		Requests:  make(map[string]interface{}),
 		Responses: make(map[string]interface{}),
 	}
 }
@@ -128,7 +128,7 @@ func TestUpdateRecord(t *testing.T) {
 			Type:     "A",
 		}
 		var dummy DNSClient = &DummyDNSClient{
-			Requests: make(map[string]*model.DNSRecordRequest),
+			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
 				"ListRecords": []model.DNSRecord{},
 				"ListZones": []model.Zone{
@@ -175,7 +175,7 @@ func TestUpdateRecord(t *testing.T) {
 		}
 
 		var dummy DNSClient = &DummyDNSClient{
-			Requests: make(map[string]*model.DNSRecordRequest),
+			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
 				"ListZones": []model.Zone{
 					{
@@ -230,7 +230,7 @@ func TestCreateRecord(t *testing.T) {
 	}
 	t.Run("No matching zone, returns error", func(t *testing.T) {
 		var dummy DNSClient = &DummyDNSClient{
-			Requests:  map[string]*model.DNSRecordRequest{},
+			Requests:  make(map[string]interface{}),
 			Responses: map[string]interface{}{},
 		}
 
@@ -255,7 +255,7 @@ func TestCreateRecord(t *testing.T) {
 		}
 
 		var dummy DNSClient = &DummyDNSClient{
-			Requests: make(map[string]*model.DNSRecordRequest),
+			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
 				"ListZones": []model.Zone{
 					{
@@ -303,6 +303,16 @@ func TestDeleteRecord(t *testing.T) {
 	})
 
 	t.Run("Matching zone, Deletes Record", func(t *testing.T) {
+		wanted := model.DNSRecord{
+			ID:       "fake-record-222",
+			ZoneID:   "fake-zone-id-222",
+			ZoneName: "fake-zone-name-222",
+			Name:     "fake-record-name-222",
+			Type:     "A",
+			Content:  "128.127.1.1",
+			Locked:   false,
+			Proxied:  false,
+		}
 		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
@@ -314,30 +324,41 @@ func TestDeleteRecord(t *testing.T) {
 						Type:   "A",
 					},
 				},
-				"DeleteRecord": nil,
+				"ListRecords":  []model.DNSRecord{wanted},
+				"DeleteRecord": wanted.ID,
 			},
 		}
 
-        //TODO check result
 		result, err := DeleteRecord(dummy, record)
-
 		if err != nil {
 			t.Fatalf("Unexpected error during DeleteRecord: %v", err)
 		}
 
+		//Check the request that was sent
 		actualReq := dummy.Requests["DeleteRecord"].(*model.DNSDeleteRequest)
 
-		expected := model.DNSDeleteRequest{
-			ID:     "",
+		expectedReq := model.DNSDeleteRequest{
+			ID:     wanted.ID,
 			ZoneID: "fake-zone-id-222",
 		}
 
-        if expected.ID != actualReq.ID {
-            t.Errorf("Incorrect Record ID used in Delete Request")
-        }
+		if expectedReq.ID != actualReq.ID {
+			t.Errorf("Wanted '%s' Got '%s'. Incorrect Record ID used in Delete Request", expectedReq.ID, actualReq.ID)
+		}
 
-        if expected.ZoneID != actualReq.ZoneID {
-            t.Errorf("Incorrect Zone ID used in Delete Request")
-        }
+		if expectedReq.ZoneID != actualReq.ZoneID {
+			t.Errorf("Wanted '%s' Got '%s'. Incorrect Zone ID used in Delete Request", expectedReq.ZoneID, actualReq.ZoneID)
+		}
+
+		//Now we can check the result
+
+		if result == nil {
+			t.Errorf("Wanted %v Got nil. Should return record deleted", record)
+		}
+
+		if result.ZoneName != record.ZoneName || ZoneType(result.Type) != record.Type || result.Name != record.Name {
+			t.Errorf("Name, Type, ZoneName mistmatch. Wanted %v Got %v as result of DeleteRecord", record, result)
+		}
+
 	})
 }
