@@ -75,28 +75,30 @@ func UpdateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 		}
 	}
 
-	if ip != remoteRecord.Content {
-		fmt.Fprintf(os.Stderr, "%s\n", ip)
-		remoteRecord.TTL = record.TTL
-		remoteRecord.Content = ip
-		fmt.Fprintf(os.Stderr, "Updating DNS [%s %s] record content with ip: %s\n", remoteRecord.Type, remoteRecord.Name, ip)
-		client.UpdateRecord(&model.DNSRecordRequest{
-			ID:      remoteRecord.ID,
-			ZoneID:  remoteRecord.ZoneID,
-			Name:    remoteRecord.Name,
-			Type:    remoteRecord.Type,
-			Content: ip,
-			Proxied: remoteRecord.Proxied,
-			TTL:     record.TTL,
-		})
-		fmt.Fprintln(os.Stderr, "Updated!")
-	} else {
-
+	if ip == remoteRecord.Content {
 		fmt.Fprintf(os.Stderr, "%s\n", ip)
 		fmt.Fprintf(os.Stderr, "DNS [%s %s] content already contains: %s\n", remoteRecord.Type, record.Name, ip)
+		return remoteRecord, nil
+
+	}
+	req := model.DNSRecordRequest{
+		ID:      remoteRecord.ID,
+		ZoneID:  remoteRecord.ZoneID,
+		Name:    remoteRecord.Name,
+		Type:    remoteRecord.Type,
+		Content: ip,
+		Proxied: remoteRecord.Proxied,
+		TTL:     record.TTL,
 	}
 
-	return remoteRecord, nil
+	if err := req.Sanitize(); err != nil {
+		return nil, err
+	}
+
+	fmt.Println("Updating DNS Record:")
+	fmt.Printf("%s\n", req.String())
+
+	return client.UpdateRecord(&req)
 }
 
 func CreateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
@@ -123,12 +125,12 @@ func CreateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 		Priority: 10,
 	}
 
-	fmt.Println("\nCreate DNS Record:")
-	fmt.Printf("Zone ID: %20s\n", req.ID)
-	fmt.Printf("Name: %20s\n", req.Name)
-	fmt.Printf("Content: %20s\n", req.Content)
-	fmt.Printf("Type: %20s\n", req.Type)
-	fmt.Printf("TTL: %20d\n", req.TTL)
+	if err := req.Sanitize(); err != nil {
+		return nil, err
+	}
+
+	fmt.Println("\nCreating DNS Record:")
+	fmt.Printf("%s\n", req.String())
 
 	return client.NewRecord(&req)
 }

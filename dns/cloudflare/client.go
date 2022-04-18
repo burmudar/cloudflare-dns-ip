@@ -6,6 +6,7 @@ import (
 	"cloudflare-dns/dns/cloudflare/model"
 	"cloudflare-dns/retrievers"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,6 +16,8 @@ import (
 )
 
 const API_CLOUDFLARE_V4 = "https://api.cloudflare.com/client/v4/"
+
+var ErrFailedToCreateRequest = errors.New("failed to create request")
 
 type HeaderCredentials struct {
 	Headers []http.Header
@@ -79,14 +82,14 @@ func (c *Client) urlJoin(p string) string {
 }
 
 func (c *Client) ExternalIP() (string, error) {
-    return c.ipRetriever.Get()
+	return c.ipRetriever.Get()
 }
 
 func (c *Client) NewRequest(method string, url string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(method, url, body)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create request for %s: %v\n", url, err)
+		return nil, fmt.Errorf("error creating request. %w", err)
 	}
 
 	c.Credentials.Apply(req)
@@ -94,13 +97,29 @@ func (c *Client) NewRequest(method string, url string, body io.Reader) (*http.Re
 	return req, nil
 }
 
+func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to do request. %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errorFromResponse(resp)
+	}
+
+	return resp, nil
+}
+
 func (c *Client) ListZones() ([]model.Zone, error) {
 	var url = c.urlJoin("zones")
 
 	req, err := c.NewRequest("GET", url, nil)
-	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to do request: %v", err)
+		return nil, err
+	}
+	resp, err := c.doRequest(req)
+	if err != nil {
+		return nil, err
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)
@@ -123,10 +142,12 @@ func (c *Client) ListRecords(zoneId string) ([]model.DNSRecord, error) {
 	var url = c.urlJoin(fmt.Sprintf("/zones/%s/dns_records", zoneId))
 
 	req, err := c.NewRequest("GET", url, nil)
-
-	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to do request: %v", err)
+		return nil, err
+	}
+	resp, err := c.doRequest(req)
+	if err != nil {
+		return nil, err
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)
@@ -155,15 +176,17 @@ func (c *Client) UpdateRecord(r *model.DNSRecordRequest) (*model.DNSRecord, erro
 	req, err := c.NewRequest("PUT", url, bytes.NewBuffer(data))
 
 	if err != nil {
+		return nil, ErrFailedToCreateRequest
+	}
+	resp, err := c.doRequest(req)
+	if err != nil {
 		return nil, err
 	}
 
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to do request: %w", err)
-	}
-
 	data, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body. %w", err)
+	}
 
 	return nil, err
 }
@@ -177,13 +200,23 @@ func (c *Client) NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) 
 	}
 
 	req, err := c.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		return nil, err
+	}
 
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to do request: %w", err)
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, errorFromResponse(resp)
+	}
+
 	data, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body. %w", err)
+	}
 
 	var record model.DNSRecord
 
@@ -196,19 +229,23 @@ func (c *Client) NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) 
 }
 
 func (c *Client) DeleteRecord(r *model.DNSDeleteRequest) (string, error) {
-	var url = c.urlJoin(fmt.Sprintf("DELETE zones/%s/dns_records/%s", r.ZoneID, r.ID))
+	var url = c.urlJoin(fmt.Sprintf("zones/%s/dns_records/%s", r.ZoneID, r.ID))
 
 	req, err := c.NewRequest("DELETE", url, nil)
-	if err != nil {
-		return "", err
-	}
 
 	resp, err := c.http.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to delete record: %w", err)
+	if err != nil {
+		return "", fmt.Errorf("Failed to do request: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", errorFromResponse(resp)
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        return "", fmt.Errorf("error reading response body. %w", err)
+    }
 
 	var result = struct {
 		id string
@@ -219,4 +256,17 @@ func (c *Client) DeleteRecord(r *model.DNSDeleteRequest) (string, error) {
 	}
 
 	return result.id, nil
+}
+
+func errorFromResponse(resp *http.Response) error {
+	msg := fmt.Sprintf("Response code <%d>\n", resp.StatusCode)
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		msg = msg + fmt.Sprintf("Body: <error: %s>\n", err)
+	} else {
+		msg = msg + fmt.Sprintf("Body: %s", string(data))
+	}
+
+	return errors.New(msg)
+
 }

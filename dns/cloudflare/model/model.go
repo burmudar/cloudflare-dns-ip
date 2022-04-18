@@ -1,6 +1,12 @@
 package model
 
-import "time"
+import (
+	"bytes"
+	"fmt"
+	"strings"
+	"text/tabwriter"
+	"time"
+)
 
 type DNSRecordMeta struct {
 	AutoAdd       bool   `json:"auto_added"`
@@ -23,6 +29,48 @@ type DNSRecordRequest struct {
 	Proxied  bool   `json:"proxied"`
 	Priority int    `json:"priority"`
 	TTL      int    `json:"ttl"`
+}
+
+func (r *DNSRecordRequest) String() string {
+
+	buf := bytes.NewBuffer(nil)
+	w := tabwriter.NewWriter(buf, 10, 20, 1, '.', tabwriter.TabIndent)
+
+	fmt.Fprintf(w, "ID\t:%s\n", r.ID)
+	fmt.Fprintf(w, "ZoneID\t:%s\n", r.ZoneID)
+	fmt.Fprintf(w, "Name\t:%s\n", r.Name)
+	fmt.Fprintf(w, "Type\t:%s\n", r.Type)
+	fmt.Fprintf(w, "Content\t:%s\n", r.Content)
+	fmt.Fprintf(w, "Proxied\t:%v\n", r.Proxied)
+	fmt.Fprintf(w, "Priority\t:%d\n", r.Priority)
+	fmt.Fprintf(w, "TTL\t:%d\n", r.TTL)
+
+	w.Flush()
+	return buf.String()
+}
+
+func (r *DNSRecordRequest) MustSanitize() {
+    if err := r.Sanitize(); err != nil {
+        panic(err)
+    }
+}
+
+func (r *DNSRecordRequest) Sanitize() error {
+	r.Type = strings.TrimSpace(r.Type)
+	if r.Type == "" {
+		r.Type = "A"
+	}
+
+	r.Content = strings.TrimSpace(r.Content)
+	if r.Content == "" {
+		return fmt.Errorf("Content cannot be empty")
+	}
+
+	if r.ZoneID == "" {
+		return fmt.Errorf("Zone ID cannot be empty")
+	}
+
+	return nil
 }
 
 type DNSRecord struct {

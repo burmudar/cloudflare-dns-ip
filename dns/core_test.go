@@ -2,11 +2,12 @@ package dns
 
 import (
 	"cloudflare-dns/dns/cloudflare/model"
+	"errors"
 	"fmt"
 	"testing"
 )
 
-var ErrEmptyResponse error = fmt.Errorf("Empty Response. Did you forget to add a response for this method ?")
+var ErrEmptyResponse error = errors.New("Empty Response. Did you forget to add a response for this method ?")
 
 type DummyDNSClient struct {
 	IP        string
@@ -24,7 +25,7 @@ func (c *DummyDNSClient) DeleteRecord(r *model.DNSDeleteRequest) (string, error)
 	} else if v, ok := response.(error); ok {
 		return "", v
 	}
-	return "", ErrEmptyResponse
+	return "", fmt.Errorf("Error DeleteRecord: %w", ErrEmptyResponse)
 }
 
 func (c *DummyDNSClient) NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) {
@@ -36,7 +37,7 @@ func (c *DummyDNSClient) NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord,
 	} else if v, ok := response.(error); ok {
 		return nil, v
 	}
-	return nil, ErrEmptyResponse
+	return nil, fmt.Errorf("Error NewRecord: %w", ErrEmptyResponse)
 }
 
 func (c *DummyDNSClient) UpdateRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error) {
@@ -48,7 +49,7 @@ func (c *DummyDNSClient) UpdateRecord(r *model.DNSRecordRequest) (*model.DNSReco
 	} else if v, ok := response.(error); ok {
 		return nil, v
 	}
-	return nil, ErrEmptyResponse
+	return nil, fmt.Errorf("Error UpdateRecord: %w", ErrEmptyResponse)
 }
 
 func (c *DummyDNSClient) ListZones() ([]model.Zone, error) {
@@ -60,7 +61,7 @@ func (c *DummyDNSClient) ListZones() ([]model.Zone, error) {
 	} else if v, ok := response.(error); ok {
 		return nil, v
 	}
-	return nil, ErrEmptyResponse
+	return nil, fmt.Errorf("Error ListZones: %w", ErrEmptyResponse)
 }
 
 func (c *DummyDNSClient) ListRecords(zoneID string) ([]model.DNSRecord, error) {
@@ -72,7 +73,7 @@ func (c *DummyDNSClient) ListRecords(zoneID string) ([]model.DNSRecord, error) {
 	} else if v, ok := response.(error); ok {
 		return nil, v
 	}
-	return nil, ErrEmptyResponse
+	return nil, fmt.Errorf("Error ListRecords: %w", ErrEmptyResponse)
 }
 
 func (c *DummyDNSClient) ExternalIP() (string, error) {
@@ -150,7 +151,7 @@ func TestUpdateRecord(t *testing.T) {
 			Name:     "Thingy",
 			Content:  "127.0.0.1",
 			Type:     "A",
-            TTL: 200,
+			TTL:      200,
 		}
 		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
@@ -223,12 +224,69 @@ func TestUpdateRecord(t *testing.T) {
 						Proxied:  false,
 					},
 				},
+				"UpdateRecord": &wanted,
 			},
 		}
 
 		result, err := UpdateRecord(dummy, Record{
 			ZoneName: "fake-zone-name-222",
 			Type:     "A",
+			Name:     "fake-record-name-222",
+			IP:       "255.255.255.255",
+			TTL:      200,
+		})
+
+		if err != nil {
+			t.Fatalf("failed during update record: %v", err)
+		}
+
+		req := dummy.Requests["UpdateRecord"].(*model.DNSRecordRequest)
+		validateRequest(t, req, &wanted)
+		eq(t, &wanted, result)
+	})
+	t.Run("Record with missing Type - Type 'A' is added automatically", func(t *testing.T) {
+		wanted := model.DNSRecord{
+			ID:       "fake-record-222",
+			ZoneID:   "fake-zone-id-222",
+			ZoneName: "fake-zone-name-222",
+			Name:     "fake-record-name-222",
+			Content:  "255.255.255.255",
+			Proxied:  false,
+			Type:     "A",
+			Locked:   false,
+			TTL:      200,
+		}
+
+		var dummy *DummyDNSClient = &DummyDNSClient{
+			Requests: make(map[string]interface{}),
+			Responses: map[string]interface{}{
+				"ListZones": []model.Zone{
+					{
+						ID:     "fake-zone-id-222",
+						Name:   "fake-zone-name-222",
+						Status: "ACTIVE",
+						Type:   "A",
+					},
+				},
+				"ListRecords": []model.DNSRecord{
+					{
+						ID:       "fake-record-222",
+						ZoneID:   "fake-zone-id-222",
+						ZoneName: "fake-zone-name-222",
+						Name:     "fake-record-name-222",
+						Type:     "A",
+						Content:  "128.127.1.1",
+						Locked:   false,
+						Proxied:  false,
+					},
+				},
+                "UpdateRecord": &wanted,
+			},
+		}
+
+		result, err := UpdateRecord(dummy, Record{
+			ZoneName: "fake-zone-name-222",
+			Type:     "",
 			Name:     "fake-record-name-222",
 			IP:       "255.255.255.255",
 			TTL:      200,
@@ -269,6 +327,50 @@ func TestCreateRecord(t *testing.T) {
 	})
 
 	t.Run("Matching zone, creates Record in zone", func(t *testing.T) {
+		wanted := model.DNSRecord{
+			ID:       "fake-record-123",
+			ZoneID:   "fake-zone-id-222",
+			ZoneName: "fake-zone-name-222",
+			Name:     "fake-record-name-222",
+			Content:  record.IP,
+			Type:     "A",
+			TTL:      200,
+		}
+
+		var dummy *DummyDNSClient = &DummyDNSClient{
+			Requests: make(map[string]interface{}),
+			Responses: map[string]interface{}{
+				"ListZones": []model.Zone{
+					{
+						ID:     "fake-zone-id-222",
+						Name:   "fake-zone-name-222",
+						Status: "ACTIVE",
+						Type:   "A",
+					},
+				},
+				"NewRecord": &wanted,
+			},
+		}
+
+		result, err := CreateRecord(dummy, record)
+
+		if err != nil {
+			t.Fatalf("Unexpected error during CreateRecord: %v", err)
+		}
+
+		req := dummy.Requests["NewRecord"].(*model.DNSRecordRequest)
+		validateRequest(t, req, &wanted)
+		eq(t, result, &wanted)
+
+	})
+	t.Run("Record with missing Type - Type 'A' automatically added", func(t *testing.T) {
+		var record = Record{
+			ZoneName: "fake-zone-name-222",
+			Type:     " ",
+			Name:     "fake-record-name-222",
+			IP:       "255.255.255.255",
+			TTL:      200,
+		}
 		wanted := model.DNSRecord{
 			ID:       "fake-record-123",
 			ZoneID:   "fake-zone-id-222",
