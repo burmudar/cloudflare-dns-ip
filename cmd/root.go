@@ -9,7 +9,7 @@ import (
 
 var token string
 var zoneName string
-var dnsRecordName string
+var recordNames []string = make([]string, 0)
 var manualIP string
 var ttlInSeconds int
 
@@ -31,3 +31,4 @@ func Execute() {
 		os.Exit(1)
 	}
 }
+
