@@ -17,7 +17,7 @@ func init() {
 
 	updateCmd.MarkPersistentFlagRequired("zone-name")
 	updateCmd.MarkPersistentFlagRequired("dns-record-name")
-	rootCmd.AddCommand(deleteCmd)
+	rootCmd.AddCommand(updateCmd)
 }
 
 var updateCmd = &cobra.Command{
