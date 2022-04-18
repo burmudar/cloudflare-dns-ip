@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"cloudflare-dns/dns"
 	"cloudflare-dns/dns/cloudflare/model"
+	"cloudflare-dns/retrievers"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 )
 
@@ -41,6 +41,7 @@ func NewHeaderCredentials(headers ...http.Header) dns.Credentials {
 type Client struct {
 	http        *http.Client
 	Credentials dns.Credentials
+	ipRetriever retrievers.StringRetriever
 	api         string
 }
 
@@ -57,12 +58,28 @@ func NewTokenClient(apiURL, token string) (dns.DNSClient, error) {
 	return &Client{
 		http.DefaultClient,
 		NewHeaderCredentials(headers),
+		retrievers.DefaultIPRetriever,
 		url.String(),
 	}, nil
 }
 
 func (c *Client) urlJoin(p string) string {
-	return path.Join(c.api, p)
+	url := ""
+	if strings.HasSuffix(c.api, "/") {
+		url = c.api
+	} else {
+		url = c.api + "/"
+	}
+
+	if strings.HasPrefix(p, "/") {
+		return url + p[1:]
+	} else {
+		return url + p
+	}
+}
+
+func (c *Client) ExternalIP() (string, error) {
+    return c.ipRetriever.Get()
 }
 
 func (c *Client) NewRequest(method string, url string, body io.Reader) (*http.Request, error) {

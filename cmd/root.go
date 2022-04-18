@@ -20,6 +20,11 @@ var rootCmd = &cobra.Command{
                 Code at github.com/burmudar/cloudflare-dns-ip`,
 }
 
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&token, "token", "t", "", "Cloudflare API token")
+	rootCmd.MarkPersistentFlagRequired("token")
+}
+
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

@@ -2,7 +2,6 @@ package dns
 
 import (
 	"cloudflare-dns/dns/cloudflare/model"
-	"cloudflare-dns/retrievers"
 	"errors"
 	"fmt"
 	"net/http"
@@ -19,6 +18,7 @@ const (
 )
 
 type DNSClient interface {
+	ExternalIP() (string, error)
 	UpdateRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error)
 	NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error)
 	DeleteRecord(r *model.DNSDeleteRequest) (string, error)
@@ -67,19 +67,12 @@ func UpdateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 	}
 	fmt.Fprintf(os.Stderr, "FOUND!\n")
 
-	var retriever retrievers.StringRetriever
-	if record.IP != "" {
-		retriever = retrievers.NewStaticStringRetriever(record.IP)
-		fmt.Fprintf(os.Stderr, "Manually setting ip ...")
-	} else {
-		retriever = retrievers.DefaultIPRetriever
-		fmt.Fprintf(os.Stderr, "Discovering public ip ...")
-	}
-
-	ip, err := retriever.Get()
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get ip: %v\n", err)
+	var ip = record.IP
+	if record.IP == "" {
+		ip, err = client.ExternalIP()
+		if err != nil {
+			return nil, fmt.Errorf("error getting external ip: %w", err)
+		}
 	}
 
 	if ip != remoteRecord.Content {
@@ -97,10 +90,11 @@ func UpdateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 			TTL:     record.TTL,
 		})
 		fmt.Fprintln(os.Stderr, "Updated!")
-	}
+	} else {
 
-	fmt.Fprintf(os.Stderr, "%s\n", ip)
-	fmt.Fprintf(os.Stderr, "DNS [%s %s] content already contains: %s\n", remoteRecord.Type, record.Name, ip)
+		fmt.Fprintf(os.Stderr, "%s\n", ip)
+		fmt.Fprintf(os.Stderr, "DNS [%s %s] content already contains: %s\n", remoteRecord.Type, record.Name, ip)
+	}
 
 	return remoteRecord, nil
 }
@@ -111,22 +105,32 @@ func CreateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 		return nil, err
 	}
 
-	fmt.Println("\nCreate DNS Record:")
-	fmt.Printf("Zone ID: %20s\n", zone.ID)
-	fmt.Printf("Name: %20s\n", record.Name)
-	fmt.Printf("Content: %20s\n", record.IP)
-	fmt.Printf("Type: %20s\n", record.Type)
-	fmt.Printf("TTL: %20d\n", record.TTL)
+	var ip = record.IP
+	if record.IP == "" {
+		ip, err = client.ExternalIP()
+		if err != nil {
+			return nil, fmt.Errorf("error getting external ip: %w", err)
+		}
+	}
 
-	return client.NewRecord(&model.DNSRecordRequest{
+	req := model.DNSRecordRequest{
 		ZoneID:   zone.ID,
 		Name:     record.Name,
-		Content:  record.IP,
+		Content:  ip,
 		Type:     string(record.Type),
 		Proxied:  false,
 		TTL:      record.TTL,
 		Priority: 10,
-	})
+	}
+
+	fmt.Println("\nCreate DNS Record:")
+	fmt.Printf("Zone ID: %20s\n", req.ID)
+	fmt.Printf("Name: %20s\n", req.Name)
+	fmt.Printf("Content: %20s\n", req.Content)
+	fmt.Printf("Type: %20s\n", req.Type)
+	fmt.Printf("TTL: %20d\n", req.TTL)
+
+	return client.NewRecord(&req)
 }
 
 func FindZone(client DNSClient, zoneName string) (*model.Zone, error) {

@@ -9,6 +9,7 @@ import (
 var ErrEmptyResponse error = fmt.Errorf("Empty Response. Did you forget to add a response for this method ?")
 
 type DummyDNSClient struct {
+	IP        string
 	Requests  map[string]interface{}
 	Responses map[string]interface{}
 }
@@ -74,6 +75,10 @@ func (c *DummyDNSClient) ListRecords(zoneID string) ([]model.DNSRecord, error) {
 	return nil, ErrEmptyResponse
 }
 
+func (c *DummyDNSClient) ExternalIP() (string, error) {
+	return c.IP, nil
+}
+
 func NewDummyClient() *DummyDNSClient {
 	return &DummyDNSClient{
 		Requests:  make(map[string]interface{}),
@@ -83,36 +88,54 @@ func NewDummyClient() *DummyDNSClient {
 
 var dummy DNSClient = &DummyDNSClient{}
 
-func eq(left, right *model.DNSRecord) bool {
+func validateRequest(t *testing.T, request *model.DNSRecordRequest, record *model.DNSRecord) {
+	if request.Content != record.Content {
+		t.Errorf("Got %+s. Wanted %+s. Incorrect content values", request.Content, record.Content)
+	}
+	if request.ZoneID != record.ZoneID {
+		t.Errorf("Got %s. Wanted %s. Incorrect ZoneID values", request.ZoneID, record.ZoneID)
+	}
+	if request.Name != record.Name {
+		t.Errorf("Got %s. Wanted %s. Incorrect Name values", request.Name, record.Name)
+	}
+	if request.TTL != record.TTL {
+		t.Errorf("Got %d. Wanted %d. Incorrect TTL values", request.TTL, record.TTL)
+	}
+	if request.Type != record.Type {
+		t.Errorf("Got %s. Wanted %s. Incorrect Type values", request.Type, record.Type)
+	}
+}
+
+func eq(t *testing.T, left, right *model.DNSRecord) bool {
 	if left.ID != right.ID {
-		return false
+		t.Errorf("Left %v. Right %v. Incorrect value for ID", left.ID, right.ID)
 	}
 	if left.Name != right.Name {
-		return false
+		t.Errorf("Left %v. Right %v. Incorrect value for Name", left.Name, right.Name)
 	}
 	if left.TTL != right.TTL {
-		return false
+		t.Errorf("Left %v. Right %v. Incorrect value for TTL", left.TTL, right.TTL)
 	}
 	if left.ZoneName != right.ZoneName {
-		return false
+		t.Errorf("Left %v. Right %v. Incorrect value for ZoneName", left.ZoneName, right.ZoneName)
 	}
 	if left.Content != right.Content {
-		return false
+		t.Errorf("Left %v. Right %v. Incorrect value for Content", left.Content, right.Content)
 	}
 	if left.ZoneID != right.ZoneID {
-		return false
+		t.Errorf("Left %v. Right %v. Incorrect value for ZoneID", left.ZoneID, right.ZoneID)
 	}
 	if left.Created != right.Created {
-		return false
+		t.Errorf("Left %v. Right %v. Incorrect value for Created", left.Created, right.Created)
 	}
 	if left.Type != right.Type {
-		return false
+		t.Errorf("Left %v. Right %v. Incorrect value for Type", left.Type, right.Type)
 	}
 	if left.Locked != right.Locked {
-		return false
+		t.Errorf("Left %v. Right %v. Incorrect value for Locked", left.Locked, right.Locked)
 	}
 	if left.Modified != right.Modified {
-		return false
+		t.Errorf("Left %v. Right %v. Incorrect value for Modified", left.Modified, right.Modified)
 	}
 
 	return true
@@ -124,10 +147,12 @@ func TestUpdateRecord(t *testing.T) {
 			ID:       "fake-record-123",
 			ZoneID:   "fake-123",
 			ZoneName: "Test Zone",
+			Name:     "Thingy",
 			Content:  "127.0.0.1",
 			Type:     "A",
+            TTL: 200,
 		}
-		var dummy DNSClient = &DummyDNSClient{
+		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
 				"ListRecords": []model.DNSRecord{},
@@ -155,9 +180,10 @@ func TestUpdateRecord(t *testing.T) {
 			t.Fatalf("failure during update record: %v", err)
 		}
 
-		if !eq(&wanted, result) {
-			t.Errorf("Wanted %v got %v", wanted, result)
-		}
+		req := dummy.Requests["NewRecord"].(*model.DNSRecordRequest)
+		validateRequest(t, req, &wanted)
+
+		eq(t, &wanted, result)
 
 	})
 
@@ -174,7 +200,7 @@ func TestUpdateRecord(t *testing.T) {
 			TTL:      200,
 		}
 
-		var dummy DNSClient = &DummyDNSClient{
+		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
 				"ListZones": []model.Zone{
@@ -208,15 +234,13 @@ func TestUpdateRecord(t *testing.T) {
 			TTL:      200,
 		})
 
-		fmt.Printf("result: %v\n", result)
-
 		if err != nil {
 			t.Fatalf("failed during update record: %v", err)
 		}
 
-		if !eq(&wanted, result) {
-			t.Errorf("wanted:\n %v \ngot %v", wanted, result)
-		}
+		req := dummy.Requests["UpdateRecord"].(*model.DNSRecordRequest)
+		validateRequest(t, req, &wanted)
+		eq(t, &wanted, result)
 	})
 }
 
@@ -247,14 +271,15 @@ func TestCreateRecord(t *testing.T) {
 	t.Run("Matching zone, creates Record in zone", func(t *testing.T) {
 		wanted := model.DNSRecord{
 			ID:       "fake-record-123",
-			ZoneID:   "fake-123",
-			ZoneName: "Test Zone",
-			Content:  "127.0.0.1",
+			ZoneID:   "fake-zone-id-222",
+			ZoneName: "fake-zone-name-222",
+			Name:     "fake-record-name-222",
+			Content:  record.IP,
 			Type:     "A",
-			TTL:      300,
+			TTL:      200,
 		}
 
-		var dummy DNSClient = &DummyDNSClient{
+		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
 				"ListZones": []model.Zone{
@@ -275,9 +300,103 @@ func TestCreateRecord(t *testing.T) {
 			t.Fatalf("Unexpected error during CreateRecord: %v", err)
 		}
 
-		if !eq(result, &wanted) {
-			t.Errorf("wanted %v got %v", result, wanted)
+		req := dummy.Requests["NewRecord"].(*model.DNSRecordRequest)
+		validateRequest(t, req, &wanted)
+		eq(t, result, &wanted)
+
+	})
+	t.Run("Matching zone and set ip, creates Record with provided ip", func(t *testing.T) {
+		record = Record{
+			ZoneName: "fake-zone-name-222",
+			Type:     "A",
+			Name:     "fake-record-name-222",
+			IP:       "999.999.999.999",
+			TTL:      200,
 		}
+		wanted := model.DNSRecord{
+			ID:       "fake-record-123",
+			ZoneID:   "fake-zone-id",
+			ZoneName: "fake-zone-name-222",
+			Name:     "fake-record-name-222",
+			Content:  "999.999.999.999",
+			Type:     "A",
+			TTL:      200,
+		}
+
+		var dummy *DummyDNSClient = &DummyDNSClient{
+			Requests: make(map[string]interface{}),
+			Responses: map[string]interface{}{
+				"ListZones": []model.Zone{
+					{
+						ID:     wanted.ZoneID,
+						Name:   wanted.ZoneName,
+						Status: "ACTIVE",
+						Type:   wanted.Type,
+					},
+				},
+				"NewRecord": &wanted,
+			},
+		}
+
+		//for this test, this should not be the discovered IP and the IP in the record should be used!
+		dummy.IP = "should not be the IP"
+
+		result, err := CreateRecord(dummy, record)
+
+		if err != nil {
+			t.Fatalf("Unexpected error during CreateRecord: %v", err)
+		}
+
+		request := dummy.Requests["NewRecord"].(*model.DNSRecordRequest)
+
+		validateRequest(t, request, &wanted)
+		eq(t, result, &wanted)
+	})
+	t.Run("Matching zone and no ip, creates Record in zone and discovers ip", func(t *testing.T) {
+		record = Record{
+			ZoneName: "fake-zone-name-222",
+			Type:     "A",
+			Name:     "fake-record-name-222",
+			IP:       "",
+			TTL:      200,
+		}
+		wanted := model.DNSRecord{
+			ID:       "fake-record-123",
+			ZoneID:   "fake-zone-id",
+			ZoneName: "fake-zone-name-222",
+			Name:     "fake-record-name-222",
+			Content:  "169.0.253.37",
+			Type:     "A",
+			TTL:      200,
+		}
+
+		var dummy *DummyDNSClient = &DummyDNSClient{
+			Requests: make(map[string]interface{}),
+			Responses: map[string]interface{}{
+				"ListZones": []model.Zone{
+					{
+						ID:     wanted.ZoneID,
+						Name:   wanted.ZoneName,
+						Status: "ACTIVE",
+						Type:   wanted.Type,
+					},
+				},
+				"NewRecord": &wanted,
+			},
+		}
+
+		dummy.IP = wanted.Content
+
+		result, err := CreateRecord(dummy, record)
+
+		if err != nil {
+			t.Fatalf("Unexpected error during CreateRecord: %v", err)
+		}
+
+		request := dummy.Requests["NewRecord"].(*model.DNSRecordRequest)
+
+		validateRequest(t, request, &wanted)
+		eq(t, result, &wanted)
 	})
 }
 
