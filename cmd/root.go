@@ -7,6 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var token string
+var zoneName string
+var dnsRecordName string
+var manualIP string
+var ttlInSeconds int
+
 var rootCmd = &cobra.Command{
 	Use:   "cloudfare-dns",
 	Short: "Cloudfare DNS updates specific dns records with public ips",

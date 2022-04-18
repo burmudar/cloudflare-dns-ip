@@ -106,7 +106,7 @@ func UpdateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 }
 
 func CreateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
-	zone, err := FindZone(client, record)
+	zone, err := FindZone(client, record.ZoneName)
 	if err != nil {
 		return nil, err
 	}
@@ -129,13 +129,13 @@ func CreateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 	})
 }
 
-func FindZone(client DNSClient, record Record) (*model.Zone, error) {
+func FindZone(client DNSClient, zoneName string) (*model.Zone, error) {
 	zones, err := client.ListZones()
 	if err != nil {
 		return nil, fmt.Errorf("Error while listing zones: %v\n", err)
 	}
 
-	zone := filterZoneByName(zones, record.ZoneName)
+	zone := filterZoneByName(zones, zoneName)
 	if zone == nil {
 		return nil, ErrZoneNotFound
 	}
@@ -143,18 +143,20 @@ func FindZone(client DNSClient, record Record) (*model.Zone, error) {
 	return zone, nil
 }
 
-func FindRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
-	zone, err := FindZone(client, record)
+func ListRecords(client DNSClient, zoneID string) ([]model.DNSRecord, error) {
+	zone, err := FindZone(client, zoneID)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "Listing DNS Records for zone '%s' using id '%s' ...", zone.Name, zone.ID)
-	records, err := client.ListRecords(zone.ID)
+	return client.ListRecords(zone.ID)
+}
+
+func FindRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
+	records, err := ListRecords(client, record.ZoneName)
 	if err != nil {
-		return nil, fmt.Errorf("Error while listing dns records: %v\n", err)
+		return nil, err
 	}
-	fmt.Fprintf(os.Stderr, "%d listed dns records\n", len(records))
 
 	fmt.Fprintf(os.Stderr, "Locating DNS Record: %s ...", record.Name)
 	remoteRecord := filterByName(records, record.Name)
