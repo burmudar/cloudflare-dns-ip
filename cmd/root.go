@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/spf13/cobra"
 )
 
-var token string
+var tokenPath string
 var zoneName string
 var recordNames []string = make([]string, 0)
 var manualIP string
@@ -21,8 +22,22 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&token, "token", "t", "", "Cloudflare API token")
+	rootCmd.PersistentFlags().StringVarP(&tokenPath, "token", "t", "", "Cloudflare API token file")
 	rootCmd.MarkPersistentFlagRequired("token")
+}
+
+func readTokenFile(path string) ([]byte, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	validPerm := info.Mode() == 0o644 || info.Mode() == 0o600 || info.Mode() == 0o444 || info.Mode() == 0o400
+	if !validPerm {
+		return nil, fmt.Errorf("invalid permissions %s", info.Mode())
+	}
+
+	return ioutil.ReadFile(path)
 }
 
 func Execute() {

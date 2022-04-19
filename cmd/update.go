@@ -25,7 +25,7 @@ var updateCmd = &cobra.Command{
 	Short: "Update a type A DNS record found in the given <zoneId> with the public IP",
 	Long:  `Using the zone id the DNS record is retrieved and the content is updated to the latest public ip`,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := cloudflare.NewTokenClient(cloudflare.API_CLOUDFLARE_V4, token)
+		client, err := cloudflare.NewTokenClient(cloudflare.API_CLOUDFLARE_V4, tokenPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to create cloudflare client: %v", err)
 		}

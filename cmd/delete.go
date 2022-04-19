@@ -23,7 +23,7 @@ var deleteCmd = &cobra.Command{
 	Short: "delete the DNS record with <dns-record-name>",
 	Long:  `Delete the DNS record with <dns-record-name> that is inside zone with <zone-name>`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := cloudflare.NewTokenClient(cloudflare.API_CLOUDFLARE_V4, token)
+		client, err := cloudflare.NewTokenClient(cloudflare.API_CLOUDFLARE_V4, tokenPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to create cloudflare client: %v", err)
 		}
@@ -38,7 +38,7 @@ var deleteCmd = &cobra.Command{
 
 			if err != nil {
 				hasErrs = true
-				fmt.Fprintf(os.Stderr, "error deleting dns record %s. %w", name, err)
+				fmt.Fprintf(os.Stderr, "error deleting dns record %s. %v", name, err)
 			} else {
 				fmt.Fprintf(os.Stderr, "'%s' record delete\n%v\n", recordNames, result)
 			}

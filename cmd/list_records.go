@@ -20,7 +20,7 @@ var listRecordCmd = &cobra.Command{
 	Short: "list DNS records present in zone <zoneName>",
 	Long:  `Using the <zoneName> all the DNS records registered for the zone are fetched`,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := cloudflare.NewTokenClient(cloudflare.API_CLOUDFLARE_V4, token)
+		client, err := cloudflare.NewTokenClient(cloudflare.API_CLOUDFLARE_V4, tokenPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to create cloudflare client: %v", err)
 		}
