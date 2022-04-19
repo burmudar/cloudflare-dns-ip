@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var ErrZoneNotFound = errors.New("Zone not found")
@@ -189,4 +190,13 @@ func DeleteRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 		return nil, err
 	}
 	return dnsRecord, err
+}
+
+func NormaliseRecordName(zoneName string, name string) string {
+
+	if strings.HasSuffix(name, zoneName) {
+		return name
+	}
+
+	return name + "." + zoneName
 }

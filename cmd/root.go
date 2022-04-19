@@ -1,15 +1,18 @@
 package cmd
 
 import (
+	"cloudflare-dns/dns"
+	"cloudflare-dns/dns/cloudflare"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/spf13/cobra"
 )
 
-var token string
+var tokenPath string
 var zoneName string
-var dnsRecordName string
+var recordNames []string = make([]string, 0)
 var manualIP string
 var ttlInSeconds int
 
@@ -21,8 +24,31 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&token, "token", "t", "", "Cloudflare API token")
+	rootCmd.PersistentFlags().StringVarP(&tokenPath, "token", "t", "", "Cloudflare API token file")
 	rootCmd.MarkPersistentFlagRequired("token")
+}
+
+func createClient() (dns.DNSClient, error) {
+	token, err := readTokenFile(tokenPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return cloudflare.NewTokenClient(cloudflare.API_CLOUDFLARE_V4, string(token))
+}
+
+func readTokenFile(path string) ([]byte, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	validPerm := info.Mode() == 0o644 || info.Mode() == 0o600 || info.Mode() == 0o444 || info.Mode() == 0o400
+	if !validPerm {
+		return nil, fmt.Errorf("invalid permissions %s", info.Mode())
+	}
+
+	return ioutil.ReadFile(path)
 }
 
 func Execute() {

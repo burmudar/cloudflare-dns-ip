@@ -50,9 +50,9 @@ func (r *DNSRecordRequest) String() string {
 }
 
 func (r *DNSRecordRequest) MustSanitize() {
-    if err := r.Sanitize(); err != nil {
-        panic(err)
-    }
+	if err := r.Sanitize(); err != nil {
+		panic(err)
+	}
 }
 
 func (r *DNSRecordRequest) Sanitize() error {
@@ -69,6 +69,7 @@ func (r *DNSRecordRequest) Sanitize() error {
 	if r.ZoneID == "" {
 		return fmt.Errorf("Zone ID cannot be empty")
 	}
+
 
 	return nil
 }
