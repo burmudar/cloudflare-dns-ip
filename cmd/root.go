@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"cloudflare-dns/dns"
+	"cloudflare-dns/dns/cloudflare"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -24,6 +26,15 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&tokenPath, "token", "t", "", "Cloudflare API token file")
 	rootCmd.MarkPersistentFlagRequired("token")
+}
+
+func createClient() (dns.DNSClient, error) {
+	token, err := readTokenFile(tokenPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return cloudflare.NewTokenClient(cloudflare.API_CLOUDFLARE_V4, string(token))
 }
 
 func readTokenFile(path string) ([]byte, error) {

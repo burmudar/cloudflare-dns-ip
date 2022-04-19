@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"cloudflare-dns/dns"
-	"cloudflare-dns/dns/cloudflare"
 	"fmt"
 	"os"
 
@@ -10,7 +9,7 @@ import (
 )
 
 func init() {
-        deleteCmd.PersistentFlags().StringVarP(&zoneName, "zone-name", "z", "", "Name of the Zone the DNS record resides in")
+	deleteCmd.PersistentFlags().StringVarP(&zoneName, "zone-name", "z", "", "Name of the Zone the DNS record resides in")
 	deleteCmd.PersistentFlags().StringSliceP("dns-record-name", "r", recordNames, "Name of the DNS record")
 
 	deleteCmd.MarkPersistentFlagRequired("zone-name")
@@ -23,9 +22,9 @@ var deleteCmd = &cobra.Command{
 	Short: "delete the DNS record with <dns-record-name>",
 	Long:  `Delete the DNS record with <dns-record-name> that is inside zone with <zone-name>`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := cloudflare.NewTokenClient(cloudflare.API_CLOUDFLARE_V4, tokenPath)
+		client, err := createClient()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to create cloudflare client: %v", err)
+			return err
 		}
 
 		hasErrs := false
