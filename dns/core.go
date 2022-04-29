@@ -62,11 +62,15 @@ func filterZoneByName(zones []model.Zone, name string) *model.Zone {
 }
 
 func UpdateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
+    defer func() { fmt.Fprintln(os.Stderr, "") }()
+    fmt.Fprintf(os.Stderr, "Locating DNS record: %s ...", record.Name)
 	remoteRecord, err := FindRecord(client, record)
 	if err != nil {
+        fmt.Fprintln(os.Stderr, "NOT FOUND")
 		return CreateRecord(client, record)
 	}
-	fmt.Fprintf(os.Stderr, "FOUND!\n")
+    fmt.Fprintln(os.Stderr, "FOUND")
+
 
 	var ip = record.IP
 	if record.IP == "" {
@@ -76,9 +80,10 @@ func UpdateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 		}
 	}
 
+    fmt.Fprintf(os.Stdout, "--- Current DNS Record ---\n%s\n", remoteRecord.String())
+
 	if ip == remoteRecord.Content {
-		fmt.Fprintf(os.Stderr, "%s\n", ip)
-		fmt.Fprintf(os.Stderr, "DNS [%s %s] content already contains: %s\n", remoteRecord.Type, record.Name, ip)
+		fmt.Fprintf(os.Stderr, "DNS Record [%s %s] content already contains: %s", remoteRecord.Type, record.Name, ip)
 		return remoteRecord, nil
 
 	}
@@ -96,8 +101,7 @@ func UpdateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 		return nil, err
 	}
 
-	fmt.Println("Updating DNS Record:")
-	fmt.Printf("%s\n", req.String())
+	fmt.Fprintf(os.Stdout, "--- Updating DNS Record ---\n%s\n", req.String())
 
 	return client.UpdateRecord(&req)
 }
@@ -130,8 +134,7 @@ func CreateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 		return nil, err
 	}
 
-	fmt.Println("\nCreating DNS Record:")
-	fmt.Printf("%s\n", req.String())
+	fmt.Fprintf(os.Stderr,"--- Creating DNS Record ---\n%s", req.String())
 
 	return client.NewRecord(&req)
 }
@@ -165,7 +168,6 @@ func FindRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "Locating DNS Record: %s ...", record.Name)
 	remoteRecord := filterByName(records, record.Name)
 	if remoteRecord == nil {
 		return nil, ErrZoneNotFound

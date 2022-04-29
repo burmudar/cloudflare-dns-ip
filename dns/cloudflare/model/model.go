@@ -15,9 +15,33 @@ type DNSRecordMeta struct {
 	Source        string `json:"Source"`
 }
 
+func (r *DNSRecordMeta) String() string {
+	buf := bytes.NewBuffer(nil)
+	w := tabwriter.NewWriter(buf, 10, 20, 1, '.', tabwriter.TabIndent)
+
+    fmt.Fprintf(w, "AutoAdd\t: %t\n", r.AutoAdd)
+    fmt.Fprintf(w, "ManagedByApps\t: %t\n", r.ManagedByApps)
+    fmt.Fprintf(w, "ManagedByArgo\t: %t\n", r.ManagedByArgo)
+    fmt.Fprintf(w, "Source\t: %s", r.Source)
+
+    w.Flush()
+    return buf.String()
+}
+
 type DNSDeleteRequest struct {
 	ID     string
 	ZoneID string
+}
+
+func (r *DNSDeleteRequest) String() string {
+	buf := bytes.NewBuffer(nil)
+	w := tabwriter.NewWriter(buf, 10, 20, 1, '.', tabwriter.TabIndent)
+
+    fmt.Fprintf(w, "ID\t: %s\n", r.ID)
+    fmt.Fprintf(w, "ZoneID\t: %s", r.ZoneID)
+
+    w.Flush()
+    return buf.String()
 }
 
 type DNSRecordRequest struct {
@@ -36,14 +60,14 @@ func (r *DNSRecordRequest) String() string {
 	buf := bytes.NewBuffer(nil)
 	w := tabwriter.NewWriter(buf, 10, 20, 1, '.', tabwriter.TabIndent)
 
-	fmt.Fprintf(w, "ID\t:%s\n", r.ID)
-	fmt.Fprintf(w, "ZoneID\t:%s\n", r.ZoneID)
-	fmt.Fprintf(w, "Name\t:%s\n", r.Name)
-	fmt.Fprintf(w, "Type\t:%s\n", r.Type)
-	fmt.Fprintf(w, "Content\t:%s\n", r.Content)
-	fmt.Fprintf(w, "Proxied\t:%v\n", r.Proxied)
-	fmt.Fprintf(w, "Priority\t:%d\n", r.Priority)
-	fmt.Fprintf(w, "TTL\t:%d\n", r.TTL)
+	fmt.Fprintf(w, "ID\t: %s\n", r.ID)
+	fmt.Fprintf(w, "ZoneID\t: %s\n", r.ZoneID)
+	fmt.Fprintf(w, "Name\t: %s\n", r.Name)
+	fmt.Fprintf(w, "Type\t: %s\n", r.Type)
+	fmt.Fprintf(w, "Content\t: %s\n", r.Content)
+	fmt.Fprintf(w, "Proxied\t: %v\n", r.Proxied)
+	fmt.Fprintf(w, "Priority\t: %d\n", r.Priority)
+	fmt.Fprintf(w, "TTL\t: %d", r.TTL)
 
 	w.Flush()
 	return buf.String()
@@ -90,6 +114,28 @@ type DNSRecord struct {
 	Meta      *DNSRecordMeta `json:"meta"`
 }
 
+func (r *DNSRecord) String() string {
+    buf := bytes.NewBuffer(nil)
+    w := tabwriter.NewWriter(buf, 10, 20, 1, '.', tabwriter.TabIndent)
+
+    fmt.Fprintf(w, "ID\t: %s\n", r.ID)
+    fmt.Fprintf(w, "ZoneID\t: %s\n", r.ZoneID)
+    fmt.Fprintf(w, "ZoneName\t: %s\n", r.ZoneName)
+    fmt.Fprintf(w, "Name\t: %s\n", r.Name)
+    fmt.Fprintf(w, "Type\t: %s\n", r.Type)
+    fmt.Fprintf(w, "Content\t: %s\n", r.Content)
+    fmt.Fprintf(w, "Proxiable\t: %t\n", r.Proxiable)
+    fmt.Fprintf(w, "Proxied\t: %t\n", r.Proxied)
+    fmt.Fprintf(w, "TTL\t: %d\n", r.TTL)
+    fmt.Fprintf(w, "Locked\t: %t\n", r.Locked)
+    fmt.Fprintf(w, "Created\t: %s\n", r.Created)
+    fmt.Fprintf(w, "Modified\t: %s\n", r.Modified)
+    fmt.Fprintf(w, "Meta\n%s", r.Meta.String())
+
+    w.Flush()
+    return buf.String()
+}
+
 type Zone struct {
 	ID              string     `json:"id"`
 	Name            string     `json:"name"`
@@ -103,4 +149,25 @@ type Zone struct {
 	Created         *time.Time `json:"created_on"`
 	Modified        *time.Time `json:"modified_on"`
 	Activated       *time.Time `json:"activated_on"`
+}
+
+func (z *Zone) String() string {
+    buf := bytes.NewBuffer(nil)
+    w := tabwriter.NewWriter(buf, 10, 20, 1, '.', tabwriter.TabIndent)
+
+    fmt.Fprintf(w, "ID\t: %s\n", z.ID)
+    fmt.Fprintf(w, "Name\t: %s\n", z.Name)
+    fmt.Fprintf(w, "Status\t: %s\n", z.Status)
+    fmt.Fprintf(w, "Paused\t: %s\n", z.Paused)
+    fmt.Fprintf(w, "Type\t: %s\n", z.Type)
+    fmt.Fprintf(w, "DevelopmentMode\t: %s\n", z.DevelopmentMode)
+    fmt.Fprintf(w, "NameServers\t: %s\n", z.NameServers)
+    fmt.Fprintf(w, "OrigNameServers\t: %s\n", z.OrigNameServers)
+    fmt.Fprintf(w, "OrigRegistrar\t: %s\n", z.OrigRegistrar)
+    fmt.Fprintf(w, "Created\t: %s\n", z.Created)
+    fmt.Fprintf(w, "Modified\t: %s\n", z.Modified)
+    fmt.Fprintf(w, "Activated\t: %s", z.Activated)
+
+    w.Flush()
+    return buf.String()
 }
