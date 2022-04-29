@@ -10,7 +10,7 @@ import (
 
 func init() {
 	deleteCmd.PersistentFlags().StringVarP(&zoneName, "zone-name", "z", "", "Name of the Zone the DNS record resides in")
-	deleteCmd.PersistentFlags().StringSliceP("dns-record-name", "r", recordNames, "Name of the DNS record")
+	deleteCmd.PersistentFlags().StringSliceVarP(&recordNames, "dns-record-name", "r", recordNames, "Name of the DNS record")
 
 	deleteCmd.MarkPersistentFlagRequired("zone-name")
 	deleteCmd.MarkPersistentFlagRequired("dns-record-name")
@@ -39,7 +39,7 @@ var deleteCmd = &cobra.Command{
 				hasErrs = true
 				fmt.Fprintf(os.Stderr, "error deleting dns record %s. %v", name, err)
 			} else {
-				fmt.Fprintf(os.Stderr, "'%s' record delete\n%v\n", recordNames, result)
+				fmt.Fprintf(os.Stderr, "--- DNS '%s' record deleted ---\n%s\n", name, result)
 			}
 		}
 

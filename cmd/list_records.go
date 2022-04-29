@@ -24,13 +24,13 @@ var listRecordCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "failed to create cloudflare client: %v", err)
 		}
 
-		fmt.Fprintf(os.Stderr, "Listing records found in zone '%s':\n", zoneName)
+        fmt.Fprintf(os.Stderr, "--- Listing records in zone '%s' ---\n", zoneName)
 		records, err := dns.ListRecords(client, zoneName)
 		if err != nil {
 			return err
 		}
 		for _, record := range records {
-			fmt.Fprintf(os.Stdout, "%v\n", record)
+			fmt.Fprintf(os.Stdout, "--- %s ---\n%s\n", record.Name, record.String())
 		}
 
 		return nil

@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"cloudflare-dns/dns"
+	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )

@@ -22,7 +22,7 @@ func (r *DNSRecordMeta) String() string {
     fmt.Fprintf(w, "AutoAdd\t: %t\n", r.AutoAdd)
     fmt.Fprintf(w, "ManagedByApps\t: %t\n", r.ManagedByApps)
     fmt.Fprintf(w, "ManagedByArgo\t: %t\n", r.ManagedByArgo)
-    fmt.Fprintf(w, "Source\t: %s\n", r.Source)
+    fmt.Fprintf(w, "Source\t: %s", r.Source)
 
     w.Flush()
     return buf.String()
@@ -38,7 +38,7 @@ func (r *DNSDeleteRequest) String() string {
 	w := tabwriter.NewWriter(buf, 10, 20, 1, '.', tabwriter.TabIndent)
 
     fmt.Fprintf(w, "ID\t: %s\n", r.ID)
-    fmt.Fprintf(w, "ZoneID\t: %s\n", r.ZoneID)
+    fmt.Fprintf(w, "ZoneID\t: %s", r.ZoneID)
 
     w.Flush()
     return buf.String()
@@ -67,7 +67,7 @@ func (r *DNSRecordRequest) String() string {
 	fmt.Fprintf(w, "Content\t: %s\n", r.Content)
 	fmt.Fprintf(w, "Proxied\t: %v\n", r.Proxied)
 	fmt.Fprintf(w, "Priority\t: %d\n", r.Priority)
-	fmt.Fprintf(w, "TTL\t: %d\n", r.TTL)
+	fmt.Fprintf(w, "TTL\t: %d", r.TTL)
 
 	w.Flush()
 	return buf.String()
@@ -130,7 +130,7 @@ func (r *DNSRecord) String() string {
     fmt.Fprintf(w, "Locked\t: %t\n", r.Locked)
     fmt.Fprintf(w, "Created\t: %s\n", r.Created)
     fmt.Fprintf(w, "Modified\t: %s\n", r.Modified)
-    fmt.Fprintf(w, "Meta\t: %s\n", r.Meta.String())
+    fmt.Fprintf(w, "Meta\n%s", r.Meta.String())
 
     w.Flush()
     return buf.String()
@@ -166,7 +166,7 @@ func (z *Zone) String() string {
     fmt.Fprintf(w, "OrigRegistrar\t: %s\n", z.OrigRegistrar)
     fmt.Fprintf(w, "Created\t: %s\n", z.Created)
     fmt.Fprintf(w, "Modified\t: %s\n", z.Modified)
-    fmt.Fprintf(w, "Activated\t: %s\n", z.Activated)
+    fmt.Fprintf(w, "Activated\t: %s", z.Activated)
 
     w.Flush()
     return buf.String()
