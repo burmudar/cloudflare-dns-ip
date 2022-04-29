@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"cloudflare-dns/dns"
-	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -12,10 +10,10 @@ func init() {
 	updateCmd.PersistentFlags().StringVarP(&zoneName, "zone-name", "z", "", "Name of the Zone the DNS record resides in")
 	updateCmd.PersistentFlags().IntVarP(&ttlInSeconds, "ttl", "", 3600, "TTL (in seconds) to set on the DNS record")
 	updateCmd.PersistentFlags().StringVarP(&manualIP, "ip", "", "", "Set the content of the dns record to this ip")
-	updateCmd.PersistentFlags().StringSliceVarP(&recordNames, "dns-record-name", "r", recordNames, "Name of the DNS record")
+	updateCmd.PersistentFlags().StringSliceVarP(&recordNames, "dns-record-names", "r", recordNames, "Name of one or more DNS records. If more than one record is specified separated them with a comma")
 
 	updateCmd.MarkPersistentFlagRequired("zone-name")
-	updateCmd.MarkPersistentFlagRequired("dns-record-name")
+	updateCmd.MarkPersistentFlagRequired("dns-record-names")
 	rootCmd.AddCommand(updateCmd)
 }
 
