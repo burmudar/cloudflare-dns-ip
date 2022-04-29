@@ -1,0 +1,9 @@
+[Unit]
+Description=Rerun Cloudflare DNS oneshot periodically
+
+[Timer]
+Unit=cloudflare-dns.service
+OnActiveSec=30min
+
+[Install]
+WantedBy=timers.target

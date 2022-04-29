@@ -1,0 +1,13 @@
+[Unit]
+Description=Cloudflare DNS A Record update
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardOutput=journal+console
+StandardError=journal+console
+ExecStart=/opt/cloudflare-dns/cloudflare-dns update -t /opt/cloudflare-dns/token -z burmudar.dev -r files,media,sonar --ttl 300
+
+[Install]
+WantedBy=multi-user.target
