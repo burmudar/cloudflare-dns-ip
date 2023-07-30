@@ -2,12 +2,12 @@ package cloudflare
 
 import (
 	"bytes"
-	"cloudflare-dns/dns"
-	"cloudflare-dns/dns/cloudflare/model"
-	"cloudflare-dns/retrievers"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/burmudar/cloudflare-dns/dns"
+	"github.com/burmudar/cloudflare-dns/dns/cloudflare/model"
+	"github.com/burmudar/cloudflare-dns/retrievers"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -243,9 +243,9 @@ func (c *Client) DeleteRecord(r *model.DNSDeleteRequest) (string, error) {
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)
-    if err != nil {
-        return "", fmt.Errorf("error reading response body. %w", err)
-    }
+	if err != nil {
+		return "", fmt.Errorf("error reading response body. %w", err)
+	}
 
 	var result = struct {
 		id string

@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"cloudflare-dns/dns"
-	"cloudflare-dns/dns/cloudflare"
 	"fmt"
+	"github.com/burmudar/cloudflare-dns/dns"
+	"github.com/burmudar/cloudflare-dns/dns/cloudflare"
 	"io/ioutil"
 	"os"
 
