@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/burmudar/cloudflare-dns/dns"
-
 	"github.com/spf13/cobra"
 )
 
