@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"cloudflare-dns/dns"
+	"github.com/burmudar/cloudflare-dns/dns"
 
 	"github.com/spf13/cobra"
 )
@@ -36,6 +36,6 @@ var updateCmd = &cobra.Command{
 			})
 		}
 
-        return nil
+		return nil
 	},
 }

@@ -1,9 +1,9 @@
 package dns
 
 import (
-	"cloudflare-dns/dns/cloudflare/model"
 	"errors"
 	"fmt"
+	"github.com/burmudar/cloudflare-dns/dns/cloudflare/model"
 	"testing"
 )
 
@@ -280,7 +280,7 @@ func TestUpdateRecord(t *testing.T) {
 						Proxied:  false,
 					},
 				},
-                "UpdateRecord": &wanted,
+				"UpdateRecord": &wanted,
 			},
 		}
 

@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"cloudflare-dns/dns"
 	"fmt"
 	"os"
+
+	"github.com/burmudar/cloudflare-dns/dns"
 
 	"github.com/spf13/cobra"
 )

@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"cloudflare-dns/dns"
 	"fmt"
 	"os"
+
+	"github.com/burmudar/cloudflare-dns/dns"
 
 	"github.com/spf13/cobra"
 )
@@ -24,7 +25,7 @@ var listRecordCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "failed to create cloudflare client: %v", err)
 		}
 
-        fmt.Fprintf(os.Stderr, "--- Listing records in zone '%s' ---\n", zoneName)
+		fmt.Fprintf(os.Stderr, "--- Listing records in zone '%s' ---\n", zoneName)
 		records, err := dns.ListRecords(client, zoneName)
 		if err != nil {
 			return err

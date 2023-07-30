@@ -34,7 +34,10 @@
               noCheck = true;
               pname = "cloudflare-dns-ip";
               version = "v0.1";
-              src = ".";
+              src = ./.;
+              subPackages = [
+                "github.com/cloudflare-dns/cmd/cli"
+              ];
               vendorSha256 = "";
             };
           }
@@ -48,7 +51,7 @@
         in
         {
           default = pkgs.mkShell {
-            buildInputs = baseDeps ++ [ packages.${system}.cloudflare-dns-ip ];
+            buildInputs = baseDeps;
           };
         });
 
@@ -58,5 +61,7 @@
       defaultPackage = forAllSystems (system: self.packages.${system}.cloudflare-dns-ip);
 
       overlay = self.overlays.default;
-      };
+
+      formatter = forAllSystems (system: nixpkgsFor.${system}.nixpkgs-fmt);
+    };
 }
