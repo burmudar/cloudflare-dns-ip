@@ -66,6 +66,63 @@
 
       overlay = self.overlays.default;
 
+      nixosModules.default = { config, lib, pkgs }:
+        let
+          cfg = config.services.cloudflare-dns-ip;
+        in
+        {
+          options = with lib;{
+            services.cloudflare-dns-ip = {
+              enable = mkEnableOption "Enable cloudflare-dns-ip";
+              tokenPath = mkOption {
+                type = types.path;
+                default = "/var/lib/cloudflare-dns-ip/token";
+                description = "path to file containing the cloudflare token";
+              };
+              user = mkOption {
+                type = types.str;
+                default = "cloudflare-dns-ip";
+                description = "user cloudflare-dns-ip should run as";
+              };
+              group = mkOption {
+                type = types.str;
+                default = "cloudflare-dns-ip";
+                description = "group cloudflare-dns-ip should run as";
+              };
+            };
+          };
+          config = lib.mkIf cfg.enable {
+              users.users."${cfg.user}" = {
+              createHome = false;
+              group = "${cfg.group}";
+              isSystemUser = true;
+              isNormalUser = false;
+              description = "user for cloudflare-dns-ip service";
+            };
+            users.groups."${cfg.group}" = { };
+            systemd.services.cloudflare-dns-ip = {
+              enable = true;
+              script =
+                ''
+                  ${lib.optionalString (cfg.tokenPath != null) ''
+                    export CLOUDFLARE_TOKEN="$(head -n1 ${lib.escapeShellArg cfg.tailscaleAuthKeyFile})"
+                  ''}
+
+                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip --help
+                '';
+              wantedBy = [ "multi-user.target" ];
+              after = [ "network-online.target" ];
+              serviceConfig = {
+                User = cfg.user;
+                Group = cfg.group;
+                Restart = "always";
+                RestartSec = "15";
+              };
+            };
+          };
+
+        };
+
       formatter = forAllSystems (system: nixpkgsFor.${system}.nixpkgs-fmt);
     };
 }
