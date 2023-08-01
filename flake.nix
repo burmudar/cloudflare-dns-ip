@@ -105,7 +105,7 @@
               script =
                 ''
                   ${lib.optionalString (cfg.tokenPath != null) ''
-                    export CLOUDFLARE_TOKEN="$(head -n1 ${lib.escapeShellArg cfg.tailscaleAuthKeyFile})"
+                    export CLOUDFLARE_TOKEN="$(head -n1 ${lib.escapeShellArg cfg.tokenPath})"
                   ''}
 
                   ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip --help
