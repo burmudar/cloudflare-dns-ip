@@ -89,10 +89,18 @@
                 default = "cloudflare-dns-ip";
                 description = "group cloudflare-dns-ip should run as";
               };
+              zone = mkOption {
+                type = types.str;
+                description = "the zone where the dns record is defined in cloudflare";
+              };
+              record = mkOption {
+                type = types.str;
+                description = "the dns record to keep updated";
+              };
             };
           };
           config = lib.mkIf cfg.enable {
-              users.users."${cfg.user}" = {
+            users.users."${cfg.user}" = {
               createHome = false;
               group = "${cfg.group}";
               isSystemUser = true;
@@ -108,15 +116,15 @@
                     export CLOUDFLARE_TOKEN="$(head -n1 ${lib.escapeShellArg cfg.tokenPath})"
                   ''}
 
-                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip --help
+                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t $CLOUDFLARE_TOKEN -z ${cfg.zone} -r ${cfg.record}
                 '';
               wantedBy = [ "multi-user.target" ];
               after = [ "network-online.target" ];
               serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = "yes";
                 User = cfg.user;
                 Group = cfg.group;
-                Restart = "always";
-                RestartSec = "15";
               };
             };
           };
