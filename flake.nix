@@ -66,6 +66,71 @@
 
       overlay = self.overlays.default;
 
+      nixosModules.default = { config, lib, pkgs }:
+        let
+          cfg = config.services.cloudflare-dns-ip;
+        in
+        {
+          options = with lib;{
+            services.cloudflare-dns-ip = {
+              enable = mkEnableOption "Enable cloudflare-dns-ip";
+              tokenPath = mkOption {
+                type = types.path;
+                default = "/var/lib/cloudflare-dns-ip/token";
+                description = "path to file containing the cloudflare token";
+              };
+              user = mkOption {
+                type = types.str;
+                default = "cloudflare-dns-ip";
+                description = "user cloudflare-dns-ip should run as";
+              };
+              group = mkOption {
+                type = types.str;
+                default = "cloudflare-dns-ip";
+                description = "group cloudflare-dns-ip should run as";
+              };
+              zone = mkOption {
+                type = types.str;
+                description = "the zone where the dns record is defined in cloudflare";
+              };
+              record = mkOption {
+                type = types.str;
+                description = "the dns record to keep updated";
+              };
+            };
+          };
+          config = lib.mkIf cfg.enable {
+            users.users."${cfg.user}" = {
+              createHome = false;
+              group = "${cfg.group}";
+              isSystemUser = true;
+              isNormalUser = false;
+              description = "user for cloudflare-dns-ip service";
+            };
+            users.groups."${cfg.group}" = { };
+            systemd.services.cloudflare-dns-ip = {
+              enable = true;
+              script =
+                ''
+                  ${lib.optionalString (cfg.tokenPath != null) ''
+                    export CLOUDFLARE_TOKEN="$(head -n1 ${lib.escapeShellArg cfg.tokenPath})"
+                  ''}
+
+                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t $CLOUDFLARE_TOKEN -z ${cfg.zone} -r ${cfg.record}
+                '';
+              wantedBy = [ "multi-user.target" ];
+              after = [ "network-online.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = "yes";
+                User = cfg.user;
+                Group = cfg.group;
+              };
+            };
+          };
+
+        };
+
       formatter = forAllSystems (system: nixpkgsFor.${system}.nixpkgs-fmt);
     };
 }
