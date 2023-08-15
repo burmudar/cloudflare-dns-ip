@@ -112,6 +112,7 @@
             users.groups."${cfg.group}" = { };
             system.activationScripts.cloudflare-lib-dir = lib.stringAfter ["var"] ''
             mkdir -p /var/lib/cloudflare-dns-ip/
+            chown ${cfg.user}:${cfg.group} /var/lib/cloudflare-dns-ip/
             '';
             systemd.services.cloudflare-dns-ip = {
               enable = true;
