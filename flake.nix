@@ -93,11 +93,11 @@
               };
               zone = mkOption {
                 type = types.str;
-                description = "the zone where the dns record is defined in cloudflare";
+                description = "the zone where the dns record is defined in cloudflare eg. 'burmudar.dev'";
               };
               record = mkOption {
                 type = types.str;
-                description = "the dns record to keep updated";
+                description = "the dns record to keep updated eg. www";
               };
             };
           };
@@ -110,15 +110,14 @@
               description = "user for cloudflare-dns-ip service";
             };
             users.groups."${cfg.group}" = { };
+            system.activateScripts.cloudflare-lib-dir = lib.stringAfter ["var"] ''
+            mkdir -p /var/lib/cloudflare-dns-ip/
+            '';
             systemd.services.cloudflare-dns-ip = {
               enable = true;
               script =
                 ''
-                  ${lib.optionalString (cfg.tokenPath != null) ''
-                    export CLOUDFLARE_TOKEN="$(head -n1 ${lib.escapeShellArg cfg.tokenPath})"
-                  ''}
-
-                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t $CLOUDFLARE_TOKEN -z ${cfg.zone} -r ${cfg.record}
+                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t ${cfg.tokenPath} -z ${cfg.zone} -r ${cfg.record}
                 '';
               wantedBy = [ "multi-user.target" ];
               after = [ "network-online.target" ];
