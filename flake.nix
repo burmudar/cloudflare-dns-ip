@@ -65,7 +65,7 @@
       defaultPackage = forAllSystems (system: self.packages.${system}.cloudflare-dns-ip);
 
       overlay = final: prev: {
-        cloudflare-dns-ip = self.packages.${final.system}.default;
+        cloudflare-dns-ip = self.packages.${final.system}.cloudflare-dns-ip;
       };
 
       nixosModules.default = { config, lib, pkgs, ... }:
