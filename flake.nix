@@ -110,7 +110,7 @@
               description = "user for cloudflare-dns-ip service";
             };
             users.groups."${cfg.group}" = { };
-            system.activateScripts.cloudflare-lib-dir = lib.stringAfter ["var"] ''
+            system.activationScripts.cloudflare-lib-dir = lib.stringAfter ["var"] ''
             mkdir -p /var/lib/cloudflare-dns-ip/
             '';
             systemd.services.cloudflare-dns-ip = {
