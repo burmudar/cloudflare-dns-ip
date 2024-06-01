@@ -30,7 +30,7 @@
             pkgs = nixpkgsFor.${system};
           in
           {
-            cloudflare-dns-ip = pkgs.buildGo119Module rec {
+            cloudflare-dns-ip = pkgs.buildGo122Module rec {
               noCheck = true;
               pname = "cloudflare-dns-ip";
               version = "v0.1";
@@ -42,7 +42,7 @@
                 mv $out/bin/{cli,${pname}}
               '';
               checkPhase = false;
-              vendorSha256 = "sha256-JFvC9V0xS8SZSdLsOtpyTrFzXjYAOaPQaJHdcnJzK3s=";
+              vendorHash = "sha256-JFvC9V0xS8SZSdLsOtpyTrFzXjYAOaPQaJHdcnJzK3s=";
             };
           }
         );
