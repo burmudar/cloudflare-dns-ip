@@ -110,12 +110,11 @@
               description = "user for cloudflare-dns-ip service";
             };
             users.groups."${cfg.group}" = { };
-            system.activationScripts.cloudflare-lib-dir = lib.stringAfter ["var"] ''
-            mkdir -p /var/lib/cloudflare-dns-ip/
-            chown ${cfg.user}:${cfg.group} /var/lib/cloudflare-dns-ip/
+            system.activationScripts.cloudflare-lib-dir = lib.stringAfter [ "var" ] ''
+              mkdir -p /var/lib/cloudflare-dns-ip/
+              chown ${cfg.user}:${cfg.group} /var/lib/cloudflare-dns-ip/
             '';
             systemd.services.cloudflare-dns-ip = {
-              enable = true;
               script =
                 ''
                   ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t ${cfg.tokenPath} -z ${cfg.zone} -r ${cfg.record}
@@ -127,6 +126,15 @@
                 RemainAfterExit = "yes";
                 User = cfg.user;
                 Group = cfg.group;
+              };
+            };
+            systemd.timers.cloudflare-dns-ip = {
+              enable = true;
+              wantedBy = [ "timers.target" ];
+              after = [ "network-online.target" ];
+              timerConfig = {
+                OnUnitActiveSec = "30min";
+                Persistent = true;
               };
             };
           };
