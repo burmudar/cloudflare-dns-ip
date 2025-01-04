@@ -99,6 +99,11 @@
                 type = types.str;
                 description = "the dns record to keep updated eg. www";
               };
+              ttl = mkOption {
+                type = types.int;
+                description = "TTL of the record measured in secs";
+                default = 25 * 60; # 25 mins * 60 secs = 1800
+              };
             };
           };
           config = lib.mkIf cfg.enable {
@@ -117,9 +122,10 @@
             systemd.services.cloudflare-dns-ip = {
               script =
                 ''
-                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t ${cfg.tokenPath} -z ${cfg.zone} -r ${cfg.record}
+                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t ${cfg.tokenPath} -z ${cfg.zone} -r ${cfg.record} -ttl ${cfg.ttl}
                 '';
               wantedBy = [ "multi-user.target" ];
+              wants = [ "network-online.target" ];
               after = [ "network-online.target" ];
               serviceConfig = {
                 Type = "oneshot";
@@ -131,6 +137,7 @@
             systemd.timers.cloudflare-dns-ip = {
               enable = true;
               wantedBy = [ "timers.target" ];
+              wants = [ "network-online.target" ];
               after = [ "network-online.target" ];
               timerConfig = {
                 OnUnitActiveSec = "30min";
