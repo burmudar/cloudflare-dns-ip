@@ -127,7 +127,7 @@
               ttl = toString cfg.ttl;
               in
                 ''
-                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t ${token} -z ${zone} -r ${record} -ttl ${ttl}
+                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t ${token} -z ${zone} -r ${record} --ttl ${ttl}
                 '';
               # without 'wantedBy' this unit won't be automatically started at boot
               wants = [ "network-online.target" ];
