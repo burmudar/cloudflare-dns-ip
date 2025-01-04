@@ -120,11 +120,16 @@
               chown ${cfg.user}:${cfg.group} /var/lib/cloudflare-dns-ip/
             '';
             systemd.services.cloudflare-dns-ip = {
-              script =
+              script = let
+              token = cfg.tokenPath;
+              zone = cfg.zone;
+              record = cfg.record;
+              ttl = toString cfg.ttl;
+              in
                 ''
-                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t ${cfg.tokenPath} -z ${cfg.zone} -r ${cfg.record} -ttl ${cfg.ttl}
+                  ${pkgs.cloudflare-dns-ip}/bin/cloudflare-dns-ip update -t ${token} -z ${zone} -r ${record} -ttl ${ttl}
                 '';
-              wantedBy = [ "multi-user.target" ];
+              # without 'wantedBy' this unit won't be automatically started at boot
               wants = [ "network-online.target" ];
               after = [ "network-online.target" ];
               serviceConfig = {
