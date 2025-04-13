@@ -144,7 +144,7 @@
               wants = [ "network-online.target" ];
               after = [ "network-online.target" ];
               timerConfig = {
-                OnCalendar = "*:0/30min";
+                OnCalendar = "*-*-* *:30:00";
                 Persistent = true;
               };
             };
