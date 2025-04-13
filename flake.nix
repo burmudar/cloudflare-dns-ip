@@ -134,7 +134,6 @@
               after = [ "network-online.target" ];
               serviceConfig = {
                 Type = "oneshot";
-                RemainAfterExit = "yes";
                 User = cfg.user;
                 Group = cfg.group;
               };
@@ -145,7 +144,7 @@
               wants = [ "network-online.target" ];
               after = [ "network-online.target" ];
               timerConfig = {
-                OnUnitActiveSec = "30min";
+                OnCalendar = "*:0/30min";
                 Persistent = true;
               };
             };
