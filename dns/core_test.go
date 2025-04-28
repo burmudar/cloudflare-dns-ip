@@ -52,11 +52,11 @@ func (c *DummyDNSClient) UpdateRecord(r *model.DNSRecordRequest) (*model.DNSReco
 	return nil, fmt.Errorf("Error UpdateRecord: %w", ErrEmptyResponse)
 }
 
-func (c *DummyDNSClient) ListZones() ([]model.Zone, error) {
+func (c *DummyDNSClient) ListZones() ([]*model.Zone, error) {
 	c.Requests["ListZones"] = &model.DNSRecordRequest{}
 
 	response := c.Responses["ListZones"]
-	if v, ok := response.([]model.Zone); ok {
+	if v, ok := response.([]*model.Zone); ok {
 		return v, nil
 	} else if v, ok := response.(error); ok {
 		return nil, v
@@ -64,11 +64,11 @@ func (c *DummyDNSClient) ListZones() ([]model.Zone, error) {
 	return nil, fmt.Errorf("Error ListZones: %w", ErrEmptyResponse)
 }
 
-func (c *DummyDNSClient) ListRecords(zoneID string) ([]model.DNSRecord, error) {
+func (c *DummyDNSClient) ListRecords(zoneID string) ([]*model.DNSRecord, error) {
 	c.Requests["ListRecords"] = nil
 
 	response := c.Responses["ListRecords"]
-	if v, ok := response.([]model.DNSRecord); ok {
+	if v, ok := response.([]*model.DNSRecord); ok {
 		return v, nil
 	} else if v, ok := response.(error); ok {
 		return nil, v
@@ -153,11 +153,11 @@ func TestUpdateRecord(t *testing.T) {
 			Type:     "A",
 			TTL:      200,
 		}
-		var dummy *DummyDNSClient = &DummyDNSClient{
+		var dummy = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
-				"ListRecords": []model.DNSRecord{},
-				"ListZones": []model.Zone{
+				"ListRecords": []*model.DNSRecord{},
+				"ListZones": []*model.Zone{
 					{
 						ID:     "fake-123",
 						Name:   "Test Zone",
@@ -201,10 +201,10 @@ func TestUpdateRecord(t *testing.T) {
 			TTL:      200,
 		}
 
-		var dummy *DummyDNSClient = &DummyDNSClient{
+		var dummy = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
-				"ListZones": []model.Zone{
+				"ListZones": []*model.Zone{
 					{
 						ID:     "fake-zone-id-222",
 						Name:   "fake-zone-name-222",
@@ -212,7 +212,7 @@ func TestUpdateRecord(t *testing.T) {
 						Type:   "A",
 					},
 				},
-				"ListRecords": []model.DNSRecord{
+				"ListRecords": []*model.DNSRecord{
 					{
 						ID:       "fake-record-222",
 						ZoneID:   "fake-zone-id-222",
@@ -260,7 +260,7 @@ func TestUpdateRecord(t *testing.T) {
 		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
-				"ListZones": []model.Zone{
+				"ListZones": []*model.Zone{
 					{
 						ID:     "fake-zone-id-222",
 						Name:   "fake-zone-name-222",
@@ -268,7 +268,7 @@ func TestUpdateRecord(t *testing.T) {
 						Type:   "A",
 					},
 				},
-				"ListRecords": []model.DNSRecord{
+				"ListRecords": []*model.DNSRecord{
 					{
 						ID:       "fake-record-222",
 						ZoneID:   "fake-zone-id-222",
@@ -340,7 +340,7 @@ func TestCreateRecord(t *testing.T) {
 		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
-				"ListZones": []model.Zone{
+				"ListZones": []*model.Zone{
 					{
 						ID:     "fake-zone-id-222",
 						Name:   "fake-zone-name-222",
@@ -384,7 +384,7 @@ func TestCreateRecord(t *testing.T) {
 		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
-				"ListZones": []model.Zone{
+				"ListZones": []*model.Zone{
 					{
 						ID:     "fake-zone-id-222",
 						Name:   "fake-zone-name-222",
@@ -428,7 +428,7 @@ func TestCreateRecord(t *testing.T) {
 		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
-				"ListZones": []model.Zone{
+				"ListZones": []*model.Zone{
 					{
 						ID:     wanted.ZoneID,
 						Name:   wanted.ZoneName,
@@ -475,7 +475,7 @@ func TestCreateRecord(t *testing.T) {
 		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
-				"ListZones": []model.Zone{
+				"ListZones": []*model.Zone{
 					{
 						ID:     wanted.ZoneID,
 						Name:   wanted.ZoneName,
@@ -537,7 +537,7 @@ func TestDeleteRecord(t *testing.T) {
 		var dummy *DummyDNSClient = &DummyDNSClient{
 			Requests: make(map[string]interface{}),
 			Responses: map[string]interface{}{
-				"ListZones": []model.Zone{
+				"ListZones": []*model.Zone{
 					{
 						ID:     "fake-zone-id-222",
 						Name:   "fake-zone-name-222",
@@ -545,7 +545,7 @@ func TestDeleteRecord(t *testing.T) {
 						Type:   "A",
 					},
 				},
-				"ListRecords":  []model.DNSRecord{wanted},
+				"ListRecords":  []*model.DNSRecord{&wanted},
 				"DeleteRecord": wanted.ID,
 			},
 		}

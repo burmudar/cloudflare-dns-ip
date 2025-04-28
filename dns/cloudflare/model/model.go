@@ -129,7 +129,11 @@ func (r *DNSRecord) String() string {
 	fmt.Fprintf(w, "Locked\t: %t\n", r.Locked)
 	fmt.Fprintf(w, "Created\t: %s\n", r.Created)
 	fmt.Fprintf(w, "Modified\t: %s\n", r.Modified)
-	fmt.Fprintf(w, "Meta\n%s", r.Meta.String())
+	if r.Meta != nil {
+		fmt.Fprintf(w, "Meta\n%s", r.Meta.String())
+	} else {
+		fmt.Fprintf(w, "Meta\n {}")
+	}
 
 	w.Flush()
 	return buf.String()
@@ -157,9 +161,9 @@ func (z *Zone) String() string {
 	fmt.Fprintf(w, "ID\t: %s\n", z.ID)
 	fmt.Fprintf(w, "Name\t: %s\n", z.Name)
 	fmt.Fprintf(w, "Status\t: %s\n", z.Status)
-	fmt.Fprintf(w, "Paused\t: %s\n", z.Paused)
+	fmt.Fprintf(w, "Paused\t: %t\n", z.Paused)
 	fmt.Fprintf(w, "Type\t: %s\n", z.Type)
-	fmt.Fprintf(w, "DevelopmentMode\t: %s\n", z.DevelopmentMode)
+	fmt.Fprintf(w, "DevelopmentMode\t: %d\n", z.DevelopmentMode)
 	fmt.Fprintf(w, "NameServers\t: %s\n", z.NameServers)
 	fmt.Fprintf(w, "OrigNameServers\t: %s\n", z.OrigNameServers)
 	fmt.Fprintf(w, "OrigRegistrar\t: %s\n", z.OrigRegistrar)
