@@ -110,7 +110,7 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func (c *Client) ListZones() ([]model.Zone, error) {
+func (c *Client) ListZones() ([]*model.Zone, error) {
 	var url = c.urlJoin("zones")
 
 	req, err := c.NewRequest("GET", url, nil)
@@ -128,8 +128,10 @@ func (c *Client) ListZones() ([]model.Zone, error) {
 	}
 
 	result := struct {
-		Zones []model.Zone `json:"result"`
-	}{}
+		Zones []*model.Zone `json:"result"`
+	}{
+		Zones: []*model.Zone{},
+	}
 	err = json.Unmarshal(data, &result)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to unmarshall response to Zones: %v", err)
@@ -138,7 +140,7 @@ func (c *Client) ListZones() ([]model.Zone, error) {
 	return result.Zones, nil
 }
 
-func (c *Client) ListRecords(zoneId string) ([]model.DNSRecord, error) {
+func (c *Client) ListRecords(zoneId string) ([]*model.DNSRecord, error) {
 	var url = c.urlJoin(fmt.Sprintf("/zones/%s/dns_records", zoneId))
 
 	req, err := c.NewRequest("GET", url, nil)
@@ -156,11 +158,18 @@ func (c *Client) ListRecords(zoneId string) ([]model.DNSRecord, error) {
 	}
 
 	result := struct {
-		Records []model.DNSRecord `json:"result"`
-	}{}
+		Records []*model.DNSRecord `json:"result"`
+	}{
+		Records: []*model.DNSRecord{},
+	}
 	err = json.Unmarshal(data, &result)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to unmarshall response to DNSRecords: %v", err)
+	}
+
+	// results returned do not have the zone id, so we add it here
+	for _, r := range result.Records {
+		r.ZoneID = zoneId
 	}
 
 	return result.Records, nil

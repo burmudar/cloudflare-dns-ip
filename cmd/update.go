@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/burmudar/cloudflare-dns/dns"
 
 	"github.com/spf13/cobra"
@@ -28,12 +30,14 @@ var updateCmd = &cobra.Command{
 		}
 
 		for _, name := range recordNames {
-			dns.UpdateRecord(client, dns.Record{
+			if _, err := dns.UpdateRecord(client, dns.Record{
 				ZoneName: zoneName,
 				Name:     dns.NormaliseRecordName(zoneName, name),
 				TTL:      ttlInSeconds,
 				IP:       manualIP,
-			})
+			}); err != nil {
+				return fmt.Errorf("error updating %s: %w", name, err)
+			}
 		}
 
 		return nil

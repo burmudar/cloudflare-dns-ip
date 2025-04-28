@@ -24,8 +24,8 @@ type DNSClient interface {
 	NewRecord(r *model.DNSRecordRequest) (*model.DNSRecord, error)
 	DeleteRecord(r *model.DNSDeleteRequest) (string, error)
 
-	ListZones() ([]model.Zone, error)
-	ListRecords(zoneID string) ([]model.DNSRecord, error)
+	ListZones() ([]*model.Zone, error)
+	ListRecords(zoneID string) ([]*model.DNSRecord, error)
 }
 
 type Credentials interface {
@@ -41,20 +41,20 @@ type Record struct {
 	TTL      int
 }
 
-func filterByName(records []model.DNSRecord, name string) *model.DNSRecord {
+func filterByName(records []*model.DNSRecord, name string) *model.DNSRecord {
 	for _, r := range records {
 		if r.Name == name {
-			return &r
+			return r
 		}
 	}
 
 	return nil
 }
 
-func filterZoneByName(zones []model.Zone, name string) *model.Zone {
+func filterZoneByName(zones []*model.Zone, name string) *model.Zone {
 	for _, z := range zones {
 		if z.Name == name {
-			return &z
+			return z
 		}
 	}
 
@@ -73,13 +73,16 @@ func UpdateRecord(client DNSClient, record Record) (*model.DNSRecord, error) {
 
 	var ip = record.IP
 	if record.IP == "" {
+		fmt.Fprintln(os.Stderr, "Fetching external ip ...")
 		ip, err = client.ExternalIP()
 		if err != nil {
 			return nil, fmt.Errorf("error getting external ip: %w", err)
 		}
 	}
 
-	fmt.Fprintf(os.Stdout, "--- Current DNS Record ---\n%s\n", remoteRecord.String())
+	fmt.Fprintf(os.Stderr, "Using IP: %s\n", ip)
+
+	fmt.Fprintf(os.Stderr, "--- Current DNS Record ---\n%s\n", remoteRecord.String())
 
 	if ip == remoteRecord.Content {
 		fmt.Fprintf(os.Stderr, "DNS Record [%s %s] content already contains: %s", remoteRecord.Type, record.Name, ip)
@@ -152,7 +155,7 @@ func FindZone(client DNSClient, zoneName string) (*model.Zone, error) {
 	return zone, nil
 }
 
-func ListRecords(client DNSClient, zoneID string) ([]model.DNSRecord, error) {
+func ListRecords(client DNSClient, zoneID string) ([]*model.DNSRecord, error) {
 	zone, err := FindZone(client, zoneID)
 	if err != nil {
 		return nil, err
