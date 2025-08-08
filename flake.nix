@@ -30,7 +30,7 @@
             pkgs = nixpkgsFor.${system};
           in
           {
-            cloudflare-dns-ip = pkgs.buildGo122Module rec {
+            cloudflare-dns-ip = pkgs.buildGoModule rec {
               noCheck = true;
               pname = "cloudflare-dns-ip";
               version = "v0.1";
